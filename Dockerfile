@@ -1,21 +1,31 @@
-# Stage 1: Get llama-server binary from llama.cpp official image
-FROM ghcr.io/ggml-org/llama.cpp:server-cuda AS llama-build
+# Use the official llama.cpp CUDA server image as the base
+# llama-server and all shared libraries (libmtmd.so.0, etc.) are already present
+FROM ghcr.io/ggml-org/llama.cpp:server-cuda
 
-# Stage 2: RunPod base with CUDA support
-FROM runpod/base:1.0.3-cuda1281-ubuntu2404
+# Install Python 3.11, uv, and openssh-server
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.11 \
+    python3-distutils \
+    curl \
+    openssh-server \
+    && rm -rf /var/lib/apt/lists/* \
+    && curl -LsSf https://astral.sh/uv/install.sh | sh \
+    && ssh-keygen -A \
+    && mkdir -p /run/sshd
 
-# Copy llama-server from build stage
-COPY --from=llama-build /app/llama-server /usr/local/bin/llama-server
+ENV PATH="/root/.local/bin:${PATH}"
 
-# Set Python version (runpod/base includes multiple Python versions)
-RUN ln -sf $(which python3.11) /usr/local/bin/python
+# Permit root login via key (no password)
+RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config \
+    && sed -i 's/#PubkeyAuthentication yes/PubkeyAuthentication yes/' /etc/ssh/sshd_config
 
-# Install Python dependencies via uv (faster, better caching)
+# Install Python dependencies
 COPY requirements.txt /requirements.txt
 RUN uv pip install --system -r /requirements.txt
 
-# Copy application code
+# Copy application code and startup script
 COPY app.py config.py llama_proxy.py ./
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
 
-# Run the FastAPI app (unbuffered output for proper log streaming)
-CMD ["python", "-u", "app.py"]
+CMD ["/start.sh"]

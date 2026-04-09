@@ -44,10 +44,11 @@ Create a network volume in the RunPod console (100GB recommended) to store the H
 ### 2. Create Serverless Endpoint
 
 1. Build and push your Docker image:
-   ```bash
+
+```bash
 docker build -t ddr-runpod/worker-llamacpp .
 docker push ddr-runpod/worker-llamacpp
-   ```
+```
 
 2. Create a new Serverless endpoint:
    - Container Image: `ddr-runpod/worker-llamacpp`
