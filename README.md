@@ -45,13 +45,13 @@ Create a network volume in the RunPod console (100GB recommended) to store the H
 
 1. Build and push your Docker image:
    ```bash
-   docker build -t your-dockerhub/worker-llamacpp .
-   docker push your-dockerhub/worker-llamacpp
+docker build -t ddr-runpod/worker-llamacpp .
+docker push ddr-runpod/worker-llamacpp
    ```
 
 2. Create a new Serverless endpoint:
-   - Container Image: `your-dockerhub/worker-llamacpp`
-   - GPU: Select appropriate GPU (A100 80GB recommended for 26B models)
+   - Container Image: `ddr-runpod/worker-llamacpp`
+   - GPU: RTX 5090 (32GB) recommended for 26B models
    - Container Disk: 50GB minimum
    - Network Volume: Attach your network volume
 
