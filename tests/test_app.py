@@ -28,7 +28,6 @@ def client(mock_llama_proxy):
             temperature=0.8,
             top_p=0.95,
             top_k=40,
-            mmpproj=None,
             port=8080,
             n_parallel=1,
             extra_args=None,

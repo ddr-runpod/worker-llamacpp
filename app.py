@@ -1,6 +1,6 @@
 import json
 from contextlib import asynccontextmanager
-from typing import AsyncIterator, Mapping
+from typing import AsyncIterator, Mapping, Union
 
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import StreamingResponse
@@ -78,8 +78,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 app = FastAPI(lifespan=lifespan)
 
 
-@app.get("/ping")
-async def health_check() -> dict:
+@app.get("/ping", response_model=None)
+async def health_check() -> Union[dict, Response]:
     llama = app.state.llama
     if await llama.health_check():
         return {"status": "healthy"}

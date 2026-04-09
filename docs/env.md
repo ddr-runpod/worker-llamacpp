@@ -1,29 +1,40 @@
 # Environment Variables
 
-## Core Parameters
+## Required
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `LLAMA_MODEL` | (required) | Path to model file (GGUF format) |
-| `LLAMA_CONTEXT_SIZE` | `4096` | Context window size |
-| `LLAMA_N_GPU_LAYERS` | `99` | Layers to offload to GPU |
-| `LLAMA_MMPROJ` | - | Path to multimodal projector |
-| `LLAMA_PORT` | `8080` | Internal port for llama-server |
-| `LLAMA_N_PARALLEL` | `1` | Parallel request slots |
+| Variable | Description |
+|----------|-------------|
+| `LLAMA_MODEL` | HuggingFace model ID (e.g., `unsloth/gemma-4-26B-A4B-it-GGUF:UD-Q6_K_XL`) |
 
-## Sampling
+## HuggingFace Configuration
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `LLAMA_TEMPERATURE` | `0.8` | Sampling temperature |
-| `LLAMA_TOP_P` | `0.95` | Top-p (nucleus) sampling |
-| `LLAMA_TOP_K` | `40` | Top-k sampling |
+| Variable | Description |
+|----------|-------------|
+| `HF_HOME` | HuggingFace cache directory. Recommended: `/runpod-volume/huggingface-cache` for network volume persistence |
+| `HF_TOKEN` | HuggingFace access token (required for gated models) |
 
-## Threading
+## Sampling (Optional - llama.cpp defaults used if not set)
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `LLAMA_THREADS` | auto | CPU threads |
+| Variable | Description |
+|----------|-------------|
+| `LLAMA_TEMPERATURE` | Sampling temperature |
+| `LLAMA_TOP_P` | Top-p (nucleus) sampling |
+| `LLAMA_TOP_K` | Top-k sampling |
+
+## Context & Performance (Optional)
+
+| Variable | Description |
+|----------|-------------|
+| `LLAMA_CONTEXT_SIZE` | Context window size |
+| `LLAMA_N_GPU_LAYERS` | Layers to offload to GPU |
+| `LLAMA_N_PARALLEL` | Parallel request slots |
+| `LLAMA_THREADS` | CPU threads |
+
+## Chat Template (Optional)
+
+| Variable | Description |
+|----------|-------------|
+| `LLAMA_CHAT_TEMPLATE_KWARGS` | JSON string for chat template, e.g., `'{"enable_thinking":true}'` |
 
 ## Advanced
 
@@ -35,29 +46,40 @@
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `PORT` | `80` | Port for the FastAPI app |
+| `PORT` | `80` | Port for the FastAPI app (set automatically by RunPod) |
 | `LLAMA_HOST` | `127.0.0.1` | Host address that `llama-server` binds to |
-| `LLAMA_CONNECT_HOST` | `LLAMA_HOST` or `127.0.0.1` for wildcard binds | Host address the FastAPI proxy uses to reach `llama-server` |
+| `LLAMA_CONNECT_HOST` | derived | Host address the FastAPI proxy uses to reach `llama-server` |
+| `LLAMA_PORT` | `8080` | Internal port for llama-server |
 
 ## Notes
 
-- `LLAMA_MODEL` is validated at startup and must be set.
+- `LLAMA_MODEL` is validated at always passed via `-hf` flag to llama-server, enabling automatic HuggingFace model download and mmproj selection.
 - If `LLAMA_HOST` is `0.0.0.0` or `::`, the proxy automatically connects to `127.0.0.1` unless `LLAMA_CONNECT_HOST` is set.
 - `LLAMA_EXTRA_ARGS` is parsed with shell-style quoting, so paths with spaces should be quoted.
+- If an env var is not set, the parameter is not passed to llama-server, which uses its own defaults.
 
 ## Examples
 
-### Basic usage
+### RunPod Serverless (Recommended)
 ```
-LLAMA_MODEL=/models/llama-3.1-8b.Q4_K_M.gguf
-LLAMA_CONTEXT_SIZE=8192
-LLAMA_TEMPERATURE=0.7
+LLAMA_MODEL=unsloth/gemma-4-26B-A4B-it-GGUF:UD-Q6_K_XL
+HF_HOME=/runpod-volume/huggingface-cache
+HF_TOKEN=<your-huggingface-token>
+LLAMA_CHAT_TEMPLATE_KWARGS={"enable_thinking":true}
 ```
 
-### Multimodal model
+### Local development
 ```
-LLAMA_MODEL=/models/llava-1.6-mistral-7b.Q4_K_M.gguf
-LLAMA_MMPROJ=/models/mmproj-model-f16.gguf
+LLAMA_MODEL=unsloth/gemma-4-26B-A4B-it-GGUF:UD-Q6_K_XL
+HF_HOME=/tmp/huggingface-cache
+```
+
+### Custom sampling parameters
+```
+LLAMA_MODEL=unsloth/gemma-4-26B-A4B-it-GGUF:UD-Q6_K_XL
+LLAMA_TEMPERATURE=1.0
+LLAMA_TOP_P=0.95
+LLAMA_TOP_K=64
 ```
 
 ### Using extra args

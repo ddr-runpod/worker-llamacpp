@@ -50,6 +50,11 @@ class LlamaProxy:
             "--host",
             self.app_config.llama_host,
         ] + self.llama_config.to_args()
+
+        env = os.environ.copy()
+        llama_env = self.llama_config.get_env()
+        env.update(llama_env)
+
         self._process_log = tempfile.TemporaryFile()
 
         try:
@@ -57,6 +62,7 @@ class LlamaProxy:
                 args,
                 stdout=self._process_log,
                 stderr=subprocess.STDOUT,
+                env=env,
             )
         except OSError as exc:
             self._close_process_log()
@@ -110,11 +116,8 @@ class LlamaProxy:
         if self.process is None or self.process.poll() is not None:
             return False
         try:
-            async with httpx.AsyncClient(
-                base_url=self.base_url, timeout=10.0
-            ) as client:
-                response = await client.get("/health")
-                return response.status_code == 200
+            response = await self.client.get("/health", timeout=10.0)
+            return response.status_code == 200
         except (httpx.ConnectError, httpx.TimeoutException):
             return False
 
