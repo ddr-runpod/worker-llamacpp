@@ -12,4 +12,4 @@ fi
 service ssh start
 
 # Start the FastAPI app (foreground, so the container stays alive)
-exec python3.11 -u app.py
+exec python3 -u app.py

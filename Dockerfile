@@ -2,10 +2,10 @@
 # llama-server and all shared libraries (libmtmd.so.0, etc.) are already present
 FROM ghcr.io/ggml-org/llama.cpp:server-cuda
 
-# Install Python 3.11, uv, and openssh-server
+# Install Python 3, uv, and openssh-server
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3.11 \
-    python3-distutils \
+    python3 \
+    python3-venv \
     curl \
     openssh-server \
     && rm -rf /var/lib/apt/lists/* \
@@ -13,7 +13,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && ssh-keygen -A \
     && mkdir -p /run/sshd
 
-ENV PATH="/root/.local/bin:${PATH}"
+ENV PATH="/root/.local/bin:${PATH}" \
+    VIRTUAL_ENV=/opt/venv
+
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 # Permit root login via key (no password)
 RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config \
@@ -21,7 +24,7 @@ RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin prohibit-passwo
 
 # Install Python dependencies
 COPY requirements.txt /requirements.txt
-RUN uv pip install --system -r /requirements.txt
+RUN uv venv $VIRTUAL_ENV && uv pip install --python $VIRTUAL_ENV -r /requirements.txt
 
 # Copy application code and startup script
 COPY app.py config.py llama_proxy.py ./
