@@ -48,22 +48,7 @@ All llama-server parameters are configurable via environment variables. Only `LL
 
 ### Optional Variables
 
-| Env Var | Description |
-|---------|-------------|
-| `HF_HOME` | HuggingFace cache directory (default: not set, uses llama.cpp default) |
-| `HF_TOKEN` | HuggingFace access token (for gated models) |
-| `PORT` | FastAPI listening port (default: 80, set by RunPod) |
-| `LLAMA_TEMPERATURE` | Sampling temperature |
-| `LLAMA_TOP_P` | Top-p sampling |
-| `LLAMA_TOP_K` | Top-k sampling |
-| `LLAMA_CONTEXT_SIZE` | Context window size |
-| `LLAMA_N_GPU_LAYERS` | GPU layers to offload |
-| `LLAMA_HOST` | Host address llama-server binds to (default: 127.0.0.1) |
-| `LLAMA_CONNECT_HOST` | Host address the FastAPI app uses to reach llama-server |
-| `LLAMA_PORT` | Internal llama-server port (default: 8080) |
-| `LLAMA_N_PARALLEL` | Parallel request slots |
-| `LLAMA_CHAT_TEMPLATE_KWARGS` | e.g., `'{"enable_thinking":true}'` |
-| `LLAMA_EXTRA_ARGS` | Additional llama-server args |
+All optional environment variables are documented in [docs/env.md](docs/env.md).
 
 Important runtime behavior:
 

@@ -36,6 +36,18 @@ def _optional_float(name: str) -> Optional[float]:
         raise ValueError(f"{name} must be a number") from exc
 
 
+def _optional_bool(name: str) -> Optional[str]:
+    val = os.getenv(name)
+    if not val:
+        return None
+    lower = val.lower()
+    if lower in ("on", "1", "yes"):
+        return "on"
+    if lower in ("off", "0", "no"):
+        return "off"
+    raise ValueError(f"{name} must be one of: on, 1, yes, off, 0, no")
+
+
 @dataclass
 class LlamaConfig:
     model: str = ""
@@ -50,6 +62,7 @@ class LlamaConfig:
     hf_home: Optional[str] = None
     hf_token: Optional[str] = None
     chat_template_kwargs: Optional[str] = None
+    reasoning: Optional[str] = None
     extra_args: Optional[str] = None
 
     def __post_init__(self) -> None:
@@ -77,6 +90,8 @@ class LlamaConfig:
             args.extend(["-np", str(self.n_parallel)])
         if self.chat_template_kwargs is not None:
             args.extend(["--chat-template-kwargs", self.chat_template_kwargs])
+        if self.reasoning is not None:
+            args.extend(["--reasoning", self.reasoning])
         if self.extra_args is not None:
             args.extend(shlex.split(self.extra_args))
 
@@ -105,6 +120,7 @@ class LlamaConfig:
             hf_home=_optional_str("HF_HOME"),
             hf_token=_optional_str("HF_TOKEN"),
             chat_template_kwargs=_optional_str("LLAMA_CHAT_TEMPLATE_KWARGS"),
+            reasoning=_optional_bool("LLAMA_REASONING"),
             extra_args=_optional_str("LLAMA_EXTRA_ARGS"),
         )
 

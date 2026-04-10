@@ -30,6 +30,12 @@
 | `LLAMA_N_PARALLEL` | Parallel request slots |
 | `LLAMA_THREADS` | CPU threads |
 
+## Reasoning (Optional)
+
+| Variable | Description |
+|----------|-------------|
+| `LLAMA_REASONING` | Enable/disable reasoning mode. Accepted values: `on`, `1`, `yes`, `off`, `0`, `no` (case-insensitive) |
+
 ## Chat Template (Optional)
 
 | Variable | Description |
@@ -65,7 +71,7 @@
 LLAMA_MODEL=unsloth/gemma-4-26B-A4B-it-GGUF:UD-Q6_K_XL
 HF_HOME=/runpod-volume/huggingface-cache
 HF_TOKEN=<your-huggingface-token>
-LLAMA_CHAT_TEMPLATE_KWARGS={"enable_thinking":true}
+LLAMA_REASONING=on
 ```
 
 ### Local development

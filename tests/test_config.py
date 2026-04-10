@@ -20,6 +20,7 @@ class TestLlamaConfig:
         monkeypatch.delenv("HF_HOME", raising=False)
         monkeypatch.delenv("HF_TOKEN", raising=False)
         monkeypatch.delenv("LLAMA_CHAT_TEMPLATE_KWARGS", raising=False)
+        monkeypatch.delenv("LLAMA_REASONING", raising=False)
 
         config = LlamaConfig.from_env()
 
@@ -36,6 +37,7 @@ class TestLlamaConfig:
         assert config.hf_home is None
         assert config.hf_token is None
         assert config.chat_template_kwargs is None
+        assert config.reasoning is None
 
     def test_from_env_with_custom_values(self, monkeypatch):
         monkeypatch.setenv("LLAMA_MODEL", "unsloth/gemma-4-26B-A4B-it-GGUF")
@@ -51,6 +53,7 @@ class TestLlamaConfig:
         monkeypatch.setenv("HF_HOME", "/runpod-volume/huggingface-cache")
         monkeypatch.setenv("HF_TOKEN", "hf_token123")
         monkeypatch.setenv("LLAMA_CHAT_TEMPLATE_KWARGS", '{"enable_thinking":true}')
+        monkeypatch.setenv("LLAMA_REASONING", "on")
 
         config = LlamaConfig.from_env()
 
@@ -67,6 +70,25 @@ class TestLlamaConfig:
         assert config.hf_home == "/runpod-volume/huggingface-cache"
         assert config.hf_token == "hf_token123"
         assert config.chat_template_kwargs == '{"enable_thinking":true}'
+        assert config.reasoning == "on"
+
+    def test_reasoning_parses_variations(self, monkeypatch):
+        monkeypatch.setenv("LLAMA_MODEL", "test")
+
+        for val in ("on", "ON", "On", "1", "yes", "YES"):
+            monkeypatch.setenv("LLAMA_REASONING", val)
+            assert LlamaConfig.from_env().reasoning == "on", f"failed for {val!r}"
+
+        for val in ("off", "OFF", "Off", "0", "no", "NO"):
+            monkeypatch.setenv("LLAMA_REASONING", val)
+            assert LlamaConfig.from_env().reasoning == "off", f"failed for {val!r}"
+
+    def test_reasoning_invalid_value_raises(self, monkeypatch):
+        monkeypatch.setenv("LLAMA_MODEL", "test")
+        monkeypatch.setenv("LLAMA_REASONING", "maybe")
+
+        with pytest.raises(ValueError, match="LLAMA_REASONING must be one of"):
+            LlamaConfig.from_env()
 
     def test_to_args_uses_hf_flag(self):
         config = LlamaConfig(
@@ -91,6 +113,16 @@ class TestLlamaConfig:
         assert "--port" in args and "8080" in args
         assert "-np" in args and "2" in args
 
+    def test_to_args_with_reasoning_on(self):
+        config = LlamaConfig(model="test", reasoning="on")
+        args = config.to_args()
+        assert "--reasoning" in args and "on" in args
+
+    def test_to_args_with_reasoning_off(self):
+        config = LlamaConfig(model="test", reasoning="off")
+        args = config.to_args()
+        assert "--reasoning" in args and "off" in args
+
     def test_to_args_with_only_model(self):
         config = LlamaConfig(model="unsloth/gemma-4-26B-A4B-it-GGUF")
         args = config.to_args()
@@ -105,6 +137,7 @@ class TestLlamaConfig:
         config = LlamaConfig(model="test", threads=None)
         args = config.to_args()
         assert "-t" not in args
+        assert "--reasoning" not in args
 
     def test_to_args_with_chat_template_kwargs(self):
         config = LlamaConfig(
@@ -163,7 +196,7 @@ class TestAppConfig:
 
         config = AppConfig.from_env()
 
-        assert config.port == 80
+        assert config.port == 5000
         assert config.llama_host == "127.0.0.1"
         assert config.llama_connect_host == "127.0.0.1"
 

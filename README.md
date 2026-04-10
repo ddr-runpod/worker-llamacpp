@@ -63,15 +63,8 @@ docker push ddr-runpod/worker-llamacpp
    | `LLAMA_MODEL` | Yes | `unsloth/gemma-4-26B-A4B-it-GGUF:UD-Q6_K_XL` |
    | `HF_HOME` | No | `/runpod-volume/huggingface-cache` |
    | `HF_TOKEN` | No | Your HuggingFace token (for gated models) |
-   | `PORT` | No (default: 80) | 80 |
 
-   Optional parameters (llama.cpp defaults used if not set):
-   - `LLAMA_TEMPERATURE` - Sampling temperature
-   - `LLAMA_TOP_P` - Top-p sampling
-   - `LLAMA_TOP_K` - Top-k sampling
-   - `LLAMA_CONTEXT_SIZE` - Context window size
-   - `LLAMA_N_GPU_LAYERS` - GPU layers to offload
-   - `LLAMA_CHAT_TEMPLATE_KWARGS` - e.g., `'{"enable_thinking":true}'`
+   See [docs/env.md](docs/env.md) for all optional environment variables.
 
 ### 3. First Request
 
