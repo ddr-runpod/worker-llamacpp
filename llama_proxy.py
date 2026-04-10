@@ -3,8 +3,7 @@ import os
 import shutil
 import signal
 import subprocess
-import tempfile
-from typing import BinaryIO, Optional
+from typing import Optional
 
 import httpx
 
@@ -20,7 +19,6 @@ class LlamaProxy:
         self.base_url = f"http://{app_config.llama_connect_host}:{llama_config.port}"
         self._client: Optional[httpx.AsyncClient] = None
         self._llama_server_path = self._find_llama_server()
-        self._process_log: Optional[BinaryIO] = None
         self._is_healthy = False
 
     def _find_llama_server(self) -> str:
@@ -57,17 +55,12 @@ class LlamaProxy:
         llama_env = self.llama_config.get_env()
         env.update(llama_env)
 
-        self._process_log = tempfile.TemporaryFile()
-
         try:
             self.process = subprocess.Popen(
                 args,
-                stdout=self._process_log,
-                stderr=subprocess.STDOUT,
                 env=env,
             )
         except OSError as exc:
-            self._close_process_log()
             raise RuntimeError(
                 f"failed to start llama-server using {self._llama_server_path}: {exc}"
             ) from exc
@@ -101,7 +94,6 @@ class LlamaProxy:
 
     async def stop(self) -> None:
         if self.process is None:
-            self._close_process_log()
             return
 
         self.process.send_signal(signal.SIGTERM)
@@ -112,7 +104,6 @@ class LlamaProxy:
             await asyncio.to_thread(self.process.wait)
 
         self.process = None
-        self._close_process_log()
 
     async def health_check(self) -> bool:
         was_healthy = self._is_healthy
@@ -174,34 +165,13 @@ class LlamaProxy:
         )
         return await self.client.send(request, stream=True)
 
-    def _close_process_log(self) -> None:
-        if self._process_log is not None:
-            self._process_log.close()
-            self._process_log = None
-
-    def _read_process_log_tail(self, max_bytes: int = 4096) -> str:
-        if self._process_log is None:
-            return ""
-
-        self._process_log.flush()
-        self._process_log.seek(0, os.SEEK_END)
-        size = self._process_log.tell()
-        self._process_log.seek(max(size - max_bytes, 0))
-        output = self._process_log.read().decode("utf-8", errors="replace").strip()
-        return output
-
     def _format_startup_failure(
         self, exit_code: Optional[int] = None, reason: Optional[str] = None
     ) -> str:
-        message = "llama-server failed to start"
         if exit_code is not None:
-            message = (
+            return (
                 f"llama-server exited before becoming healthy (exit code {exit_code})"
             )
-        elif reason:
-            message = f"llama-server failed to start: {reason}"
-
-        output = self._read_process_log_tail()
-        if output:
-            return f"{message}\nRecent llama-server output:\n{output}"
-        return message
+        if reason:
+            return f"llama-server failed to start: {reason}"
+        return "llama-server failed to start"

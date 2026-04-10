@@ -34,7 +34,7 @@ The request flow is:
 
 8. **Dual port setup**: FastAPI listens on the RunPod-provided PORT environment variable (required, defaults to 80). llama-server listens on `LLAMA_HOST:LLAMA_PORT`, while the proxy connects to `LLAMA_CONNECT_HOST:LLAMA_PORT`. This separation avoids connecting to an invalid wildcard address.
 
-9. **Operational diagnostics**: The proxy captures `llama-server` output during startup, detects early process exit, and surfaces recent backend logs when startup fails.
+9. **Operational diagnostics**: The proxy detects early llama-server process exit and surfaces error information when startup fails.
 
 ## Configuration
 
