@@ -57,6 +57,17 @@
 | `LLAMA_CONNECT_HOST` | derived | Host address the FastAPI proxy uses to reach `llama-server` |
 | `LLAMA_PORT` | `8080` | Internal port for llama-server |
 
+## Logging
+
+The worker outputs structured JSON logs to stderr, which RunPod captures automatically.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `RUNPOD_SERVICE_NAME` | `worker-llamacpp` | Service identifier in logs |
+| `RUNPOD_SERVICE_VERSION` | `unknown` | Version for logs (e.g., git tag) |
+| `LOG_LEVEL` | `INFO` | Log level: `DEBUG`, `INFO`, `WARN`, `ERROR` |
+| `ENV` | `unknown` | Environment name (e.g., `prod`, `dev`) |
+
 ## Notes
 
 - `LLAMA_MODEL` is validated at always passed via `-hf` flag to llama-server, enabling automatic HuggingFace model download and mmproj selection.
@@ -96,4 +107,10 @@ LLAMA_EXTRA_ARGS=--flash-attn on --rope-scaling yarn --embedding
 ### Using extra args with spaces
 ```
 LLAMA_EXTRA_ARGS=--log-file "/tmp/llama server.log"
+```
+
+### Debugging model downloads
+To see detailed model download progress (useful for first-time setup or troubleshooting downloads), add the verbose flag:
+```
+LLAMA_EXTRA_ARGS=-v
 ```

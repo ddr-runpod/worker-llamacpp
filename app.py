@@ -8,6 +8,7 @@ from starlette.background import BackgroundTask
 
 from config import AppConfig, LlamaConfig
 from llama_proxy import LlamaProxy
+from rplog import log
 
 
 HOP_BY_HOP_HEADERS = {
@@ -69,10 +70,14 @@ def _is_streaming_request(request: Request, content: bytes) -> bool:
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.llama = LlamaProxy(LlamaConfig.from_env(), AppConfig.from_env())
+    app.state.model = LlamaConfig.from_env().model
+    log.info("starting worker", extra={"model": app.state.model})
     await app.state.llama.start()
+    log.info("worker started", extra={"model": app.state.model})
     yield
     await app.state.llama.close()
     await app.state.llama.stop()
+    log.info("worker stopped")
 
 
 app = FastAPI(lifespan=lifespan)

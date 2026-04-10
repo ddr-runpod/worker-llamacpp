@@ -9,6 +9,7 @@ from typing import BinaryIO, Optional
 import httpx
 
 from config import AppConfig, LlamaConfig
+from rplog import log
 
 
 class LlamaProxy:
@@ -20,6 +21,7 @@ class LlamaProxy:
         self._client: Optional[httpx.AsyncClient] = None
         self._llama_server_path = self._find_llama_server()
         self._process_log: Optional[BinaryIO] = None
+        self._is_healthy = False
 
     def _find_llama_server(self) -> str:
         custom_path = os.getenv("LLAMA_SERVER_PATH")
@@ -113,13 +115,23 @@ class LlamaProxy:
         self._close_process_log()
 
     async def health_check(self) -> bool:
+        was_healthy = self._is_healthy
+
         if self.process is None or self.process.poll() is not None:
-            return False
-        try:
-            response = await self.client.get("/health", timeout=10.0)
-            return response.status_code == 200
-        except (httpx.ConnectError, httpx.TimeoutException):
-            return False
+            self._is_healthy = False
+        else:
+            try:
+                response = await self.client.get("/health", timeout=10.0)
+                self._is_healthy = response.status_code == 200
+            except (httpx.ConnectError, httpx.TimeoutException):
+                self._is_healthy = False
+
+        if was_healthy and not self._is_healthy:
+            log.error("llama-server became unhealthy")
+        elif not was_healthy and self._is_healthy:
+            log.info("llama-server healthy", extra={"model": self.llama_config.model})
+
+        return self._is_healthy
 
     @property
     def client(self) -> httpx.AsyncClient:
