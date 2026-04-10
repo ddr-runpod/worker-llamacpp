@@ -111,7 +111,7 @@ class LlamaConfig:
 
 @dataclass
 class AppConfig:
-    port: int = 80
+    port: int = 5000
     llama_host: str = "127.0.0.1"
     llama_connect_host: str = "127.0.0.1"
 
@@ -140,7 +140,7 @@ class AppConfig:
             except ValueError as exc:
                 raise ValueError("PORT must be an integer") from exc
         else:
-            port = 80
+            port = 5000
 
         return cls(
             port=port,
