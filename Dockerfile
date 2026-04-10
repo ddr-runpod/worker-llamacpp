@@ -27,7 +27,7 @@ COPY requirements.txt /requirements.txt
 RUN uv venv $VIRTUAL_ENV && uv pip install --python $VIRTUAL_ENV -r /requirements.txt
 
 # Copy application code and startup script
-COPY app.py config.py llama_proxy.py ./
+COPY app.py config.py llama_proxy.py rplog.py ./
 COPY start.sh /start.sh
 RUN chmod +x /start.sh
 

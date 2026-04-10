@@ -87,6 +87,6 @@ Important behavior:
 
 ## Operational notes
 
-- Startup failures include recent `llama-server` output when available
+- Startup failures surface error information when the llama-server process exits early
 - `/ping` only reports healthy when the backend `llama-server` health endpoint is healthy
 - Streaming requests are detected from either `Accept: text/event-stream` or a JSON body with `"stream": true`
