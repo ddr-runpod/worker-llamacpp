@@ -8,7 +8,7 @@ Run `llama.cpp` behind a small FastAPI worker that exposes OpenAI-compatible end
 - `llama_proxy.py` starts `llama-server`, waits for `/health`, and forwards requests over HTTP.
 - `config.py` loads and validates environment variables before startup.
 
-The FastAPI app and `llama-server` run in the same container. The Python app listens on `PORT`, while `llama-server` listens on `LLAMA_HOST:LLAMA_PORT` and is only reached internally.
+The FastAPI app and `llama-server` run in the same container. The Python app listens on `PORT` (required, defaults to 80), while `llama-server` listens on `LLAMA_HOST:LLAMA_PORT` and is only reached internally.
 
 ## Quick Start (Local)
 

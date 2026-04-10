@@ -6,7 +6,7 @@ This project allows to run llama.cpp on a RunPod serverless load balancing worke
 
 The worker consists of two main components that communicate over HTTP on the same machine:
 
-1. **FastAPI application (app.py)**: This is the entry point that RunPod communicates with. It listens on the PORT environment variable (typically 80). It exposes a health check endpoint at /ping and proxies all OpenAI-compatible API requests to the internal llama-server.
+1. **FastAPI application (app.py)**: This is the entry point that RunPod communicates with. It listens on the PORT environment variable (required, defaults to 80). It exposes a health check endpoint at /ping and proxies all OpenAI-compatible API requests to the internal llama-server.
 
 2. **llama-server**: This is the llama.cpp HTTP server that runs the actual model inference. The FastAPI app spawns it as a subprocess and it listens on `LLAMA_HOST:LLAMA_PORT`. By default this is `127.0.0.1:8080`, but wildcard binds such as `0.0.0.0` are supported for the server process. It provides endpoints like `/v1/chat/completions`, `/v1/completions`, and `/health`.
 
@@ -32,7 +32,7 @@ The request flow is:
 
 7. **Health check verifies llama-server**: The /ping endpoint checks if llama-server is responding at /health. Returns 503 if the model is not loaded or the server is unavailable. This prevents RunPod from routing traffic to unready workers.
 
-8. **Dual port setup**: FastAPI listens on the RunPod-provided PORT environment variable. llama-server listens on `LLAMA_HOST:LLAMA_PORT`, while the proxy connects to `LLAMA_CONNECT_HOST:LLAMA_PORT`. This separation avoids connecting to an invalid wildcard address.
+8. **Dual port setup**: FastAPI listens on the RunPod-provided PORT environment variable (required, defaults to 80). llama-server listens on `LLAMA_HOST:LLAMA_PORT`, while the proxy connects to `LLAMA_CONNECT_HOST:LLAMA_PORT`. This separation avoids connecting to an invalid wildcard address.
 
 9. **Operational diagnostics**: The proxy captures `llama-server` output during startup, detects early process exit, and surfaces recent backend logs when startup fails.
 
@@ -97,8 +97,8 @@ Subsequent requests will use the cached model from the network volume.
 # Install uv if you don't have it
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Create virtual environment and install dependencies
-uv sync
+# Create virtual environment and install dependencies (including dev deps for tests)
+uv sync --all-extras
 
 # Run locally with HuggingFace model
 LLAMA_MODEL=unsloth/gemma-4-26B-A4B-it-GGUF:UD-Q6_K_XL uv run python -u app.py

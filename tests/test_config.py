@@ -189,14 +189,22 @@ class TestLlamaConfig:
 
 
 class TestAppConfig:
-    def test_defaults(self, monkeypatch):
+    def test_port_required(self, monkeypatch):
         monkeypatch.delenv("PORT", raising=False)
+        monkeypatch.delenv("LLAMA_HOST", raising=False)
+        monkeypatch.delenv("LLAMA_CONNECT_HOST", raising=False)
+
+        with pytest.raises(ValueError, match="PORT is required"):
+            AppConfig.from_env()
+
+    def test_defaults(self, monkeypatch):
+        monkeypatch.setenv("PORT", "80")
         monkeypatch.delenv("LLAMA_HOST", raising=False)
         monkeypatch.delenv("LLAMA_CONNECT_HOST", raising=False)
 
         config = AppConfig.from_env()
 
-        assert config.port == 5000
+        assert config.port == 80
         assert config.llama_host == "127.0.0.1"
         assert config.llama_connect_host == "127.0.0.1"
 
@@ -211,6 +219,7 @@ class TestAppConfig:
         assert config.llama_connect_host == "10.0.0.5"
 
     def test_wildcard_llama_host_uses_loopback_for_connect(self, monkeypatch):
+        monkeypatch.setenv("PORT", "80")
         monkeypatch.setenv("LLAMA_HOST", "0.0.0.0")
         monkeypatch.delenv("LLAMA_CONNECT_HOST", raising=False)
 
@@ -220,6 +229,7 @@ class TestAppConfig:
         assert config.llama_connect_host == "127.0.0.1"
 
     def test_connect_host_override(self, monkeypatch):
+        monkeypatch.setenv("PORT", "80")
         monkeypatch.setenv("LLAMA_HOST", "0.0.0.0")
         monkeypatch.setenv("LLAMA_CONNECT_HOST", "172.17.0.2")
 

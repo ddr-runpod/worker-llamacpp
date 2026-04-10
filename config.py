@@ -127,7 +127,7 @@ class LlamaConfig:
 
 @dataclass
 class AppConfig:
-    port: int = 5000
+    port: int = 80
     llama_host: str = "127.0.0.1"
     llama_connect_host: str = "127.0.0.1"
 
@@ -150,13 +150,12 @@ class AppConfig:
                 llama_connect_host = llama_host
 
         port = os.getenv("PORT")
-        if port:
-            try:
-                port = int(port)
-            except ValueError as exc:
-                raise ValueError("PORT must be an integer") from exc
-        else:
-            port = 5000
+        if not port:
+            raise ValueError("PORT is required")
+        try:
+            port = int(port)
+        except ValueError as exc:
+            raise ValueError("PORT must be an integer") from exc
 
         return cls(
             port=port,
