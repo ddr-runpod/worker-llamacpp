@@ -416,6 +416,15 @@ class TestResolveRunpodCachePath:
         with pytest.raises(FileNotFoundError, match="RunPod cached model not found"):
             resolve_runpod_cache_path("org/test/model.gguf", hub_root=str(tmp_path))
 
+    def test_resolves_with_mixed_case(self, tmp_path):
+        self._make_cache(tmp_path, files=["model.gguf"])
+        result = resolve_runpod_cache_path(
+            "ORG/Test/model.gguf", hub_root=str(tmp_path)
+        )
+        assert result == str(
+            tmp_path / "models--org--test" / "snapshots" / "abc123" / "model.gguf"
+        )
+
     def test_raises_on_invalid_format(self):
         with pytest.raises(ValueError, match="must be in 'org/name/filename' format"):
             resolve_runpod_cache_path("invalid", hub_root="/ignored")

@@ -79,7 +79,7 @@ def resolve_runpod_cache_path(path: str, hub_root: Optional[str] = None) -> str:
             f"RunPod cache path must be in 'org/name/filename' format, got: {path}"
         )
     org, name, filename = parts
-    cache_dir = os.path.join(hub_root, f"models--{org}--{name}")
+    cache_dir = os.path.join(hub_root, f"models--{org.lower()}--{name.lower()}")
     refs_file = os.path.join(cache_dir, "refs", "main")
     snapshots_dir = os.path.join(cache_dir, "snapshots")
 
