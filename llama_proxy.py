@@ -54,6 +54,9 @@ class LlamaProxy:
             self.app_config.llama_host,
         ] + self.llama_config.to_args()
 
+        if os.environ.get("LOG_LEVEL", "").upper() == "DEBUG":
+            args.append("-v")
+
         env = os.environ.copy()
         llama_env = self.llama_config.get_env()
         env.update(llama_env)
