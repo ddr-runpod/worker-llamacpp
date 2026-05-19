@@ -50,7 +50,9 @@ def _optional_bool(name: str) -> Optional[str]:
 
 @dataclass
 class LlamaConfig:
-    model: str = ""
+    hf_model: Optional[str] = None
+    model: Optional[str] = None
+    mmproj: Optional[str] = None
     temperature: Optional[float] = None
     top_p: Optional[float] = None
     top_k: Optional[int] = None
@@ -66,11 +68,19 @@ class LlamaConfig:
     extra_args: Optional[str] = None
 
     def __post_init__(self) -> None:
-        if not self.model:
-            raise ValueError("LLAMA_MODEL is required")
+        if not self.hf_model and not self.model:
+            raise ValueError("Either LLAMA_HF_MODEL or LLAMA_MODEL is required")
+        if self.hf_model and self.model:
+            raise ValueError("Only one of LLAMA_HF_MODEL or LLAMA_MODEL may be set")
 
     def to_args(self) -> list[str]:
-        args = ["-hf", self.model]
+        args = []
+        if self.hf_model:
+            args.extend(["-hf", self.hf_model])
+        if self.model:
+            args.extend(["--model", self.model])
+        if self.mmproj:
+            args.extend(["--mmproj", self.mmproj])
 
         if self.ctx_size is not None:
             args.extend(["-c", str(self.ctx_size)])
@@ -108,7 +118,9 @@ class LlamaConfig:
     @classmethod
     def from_env(cls) -> "LlamaConfig":
         return cls(
-            model=_required_str("LLAMA_MODEL"),
+            hf_model=_optional_str("LLAMA_HF_MODEL"),
+            model=_optional_str("LLAMA_MODEL"),
+            mmproj=_optional_str("LLAMA_MMPROJ"),
             temperature=_optional_float("LLAMA_TEMPERATURE"),
             top_p=_optional_float("LLAMA_TOP_P"),
             top_k=_optional_int("LLAMA_TOP_K"),

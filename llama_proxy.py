@@ -120,7 +120,7 @@ class LlamaProxy:
         if was_healthy and not self._is_healthy:
             log.error("llama-server became unhealthy")
         elif not was_healthy and self._is_healthy:
-            log.info("llama-server healthy", extra={"model": self.llama_config.model})
+            log.info("llama-server healthy", extra={"model": self.llama_config.hf_model or self.llama_config.model})
 
         return self._is_healthy
 

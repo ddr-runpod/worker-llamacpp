@@ -18,7 +18,7 @@ The request flow is:
 
 ### Key Design Decisions
 
-1. **Always use -hf flag**: The `LLAMA_MODEL` is always passed to llama-server via the `-hf` flag, which automatically handles model download and mmproj selection from HuggingFace.
+1. **Dual model configuration**: Use `LLAMA_HF_MODEL` for HuggingFace auto-download (via `-hf` flag) or `LLAMA_MODEL` for a local GGUF file path (via `--model` flag). Exactly one must be set.
 
 2. **No Python defaults**: Config parameters only use values explicitly set via environment variables. If an env var is not set, the parameter is not passed to llama-server, which uses its own defaults.
 
@@ -38,13 +38,16 @@ The request flow is:
 
 ## Configuration
 
-All llama-server parameters are configurable via environment variables. Only `LLAMA_MODEL` is required.
+All llama-server parameters are configurable via environment variables. Exactly one of `LLAMA_HF_MODEL` or `LLAMA_MODEL` is required.
 
 ### Required Variables
 
 | Env Var | Description |
 |---------|-------------|
-| `LLAMA_MODEL` | HuggingFace model ID (e.g., `unsloth/gemma-4-26B-A4B-it-GGUF:UD-Q6_K_XL`) |
+| `LLAMA_HF_MODEL` | HuggingFace model ID for auto-download (e.g., `philipsorst/gemma-4-26B-A4B-it-UD-Q6_K_XL`) |
+| `LLAMA_MODEL` | Local path to a GGUF model file (e.g., `/runpod-volume/.../model.gguf`) |
+
+Exactly one of the two above is required — they are validated as XOR.
 
 ### Optional Variables
 
@@ -53,7 +56,7 @@ All optional environment variables are documented in [docs/env.md](docs/env.md).
 Important runtime behavior:
 
 - `LLAMA_MODEL` is required and validated at startup.
-- The model is always passed via `-hf` flag to enable automatic HuggingFace download.
+- Use `LLAMA_HF_MODEL` for HuggingFace auto-download via `-hf` flag, or `LLAMA_MODEL` for a local file via `--model` flag.
 - `LLAMA_EXTRA_ARGS` is parsed with shell-style quoting, so values containing spaces should be quoted.
 - If `LLAMA_HOST` is `0.0.0.0` or `::`, the proxy defaults `LLAMA_CONNECT_HOST` to `127.0.0.1` unless explicitly overridden.
 
@@ -79,7 +82,7 @@ docker push your-dockerhub/worker-llamacpp
    - Network Volume: Attach your network volume
 
 2. Set Environment Variables:
-   - `LLAMA_MODEL`: e.g., `unsloth/gemma-4-26B-A4B-it-GGUF:UD-Q6_K_XL`
+   - `LLAMA_HF_MODEL` or `LLAMA_MODEL`: Choose one. e.g., `philipsorst/gemma-4-26B-A4B-it-UD-Q6_K_XL` or `/runpod-volume/.../model.gguf`
    - `HF_HOME`: `/runpod-volume/huggingface-cache` (point to network volume)
    - `HF_TOKEN`: Your HuggingFace token (required for gated models)
 
@@ -101,7 +104,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 uv sync --all-extras
 
 # Run locally with HuggingFace model
-LLAMA_MODEL=unsloth/gemma-4-26B-A4B-it-GGUF:UD-Q6_K_XL uv run python -u app.py
+LLAMA_HF_MODEL=unsloth/gemma-4-26B-A4B-it-GGUF:UD-Q6_K_XL uv run python -u app.py
 
 # Run tests
 uv run pytest tests/

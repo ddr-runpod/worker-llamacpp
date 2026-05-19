@@ -69,8 +69,9 @@ def _is_streaming_request(request: Request, content: bytes) -> bool:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    app.state.llama = LlamaProxy(LlamaConfig.from_env(), AppConfig.from_env())
-    app.state.model = LlamaConfig.from_env().model
+    cfg = LlamaConfig.from_env()
+    app.state.llama = LlamaProxy(cfg, AppConfig.from_env())
+    app.state.model = cfg.hf_model or cfg.model
     log.info("starting worker", extra={"model": app.state.model})
     await app.state.llama.start()
     log.info("worker started", extra={"model": app.state.model})

@@ -20,7 +20,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 uv sync
 
 # Run with a HuggingFace model (uses -hf flag)
-LLAMA_MODEL=unsloth/gemma-4-26B-A4B-it-GGUF:UD-Q6_K_XL uv run python -u app.py
+LLAMA_HF_MODEL=unsloth/gemma-4-26B-A4B-it-GGUF:UD-Q6_K_XL uv run python -u app.py
 ```
 
 ## Run Tests
@@ -60,7 +60,7 @@ docker push ddr-runpod/worker-llamacpp
 
    | Variable | Required | Example |
    |----------|----------|---------|
-   | `LLAMA_MODEL` | Yes | `unsloth/gemma-4-26B-A4B-it-GGUF:UD-Q6_K_XL` |
+   | `LLAMA_HF_MODEL` or `LLAMA_MODEL` | Yes (choose one) | `philipsorst/gemma-4-26B-A4B-it-UD-Q6_K_XL` or `/runpod-volume/.../model.gguf` |
    | `HF_HOME` | No | `/runpod-volume/huggingface-cache` |
    | `HF_TOKEN` | No | Your HuggingFace token (for gated models) |
 
@@ -68,9 +68,7 @@ docker push ddr-runpod/worker-llamacpp
 
 ### 3. First Request
 
-On the first request, llama.cpp will automatically:
-- Download the model from HuggingFace to the network volume
-- Load the model into GPU memory
+When using `LLAMA_HF_MODEL`, llama.cpp will automatically download the model from HuggingFace to the network volume on the first request. When using `LLAMA_MODEL`, the local GGUF file is loaded immediately.
 
 Subsequent requests will use the cached model.
 
@@ -80,8 +78,10 @@ See `docs/env.md` for the full environment variable reference.
 
 Important behavior:
 
-- `LLAMA_MODEL` is required and is always passed to llama-server via `-hf` flag
-- The `-hf` flag automatically handles HuggingFace model download and mmproj selection
+- `LLAMA_HF_MODEL` or `LLAMA_MODEL` is required and validated as XOR (exactly one must be set)
+- `LLAMA_HF_MODEL` is passed via `-hf` flag for HuggingFace auto-download
+- `LLAMA_MODEL` is passed via `--model` flag for local GGUF file paths
+- `LLAMA_MMPROJ` is passed via `--mmproj` flag for multimodal projection files
 - `LLAMA_EXTRA_ARGS` supports shell-style quoting
 - If `LLAMA_HOST` uses a wildcard bind such as `0.0.0.0`, the proxy connects through `127.0.0.1` unless `LLAMA_CONNECT_HOST` is set
 

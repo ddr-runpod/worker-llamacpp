@@ -4,19 +4,22 @@ from config import AppConfig, LlamaConfig
 
 class TestLlamaConfig:
     def test_from_env_requires_model(self, monkeypatch):
+        monkeypatch.delenv("LLAMA_HF_MODEL", raising=False)
         monkeypatch.delenv("LLAMA_MODEL", raising=False)
 
-        with pytest.raises(ValueError, match="LLAMA_MODEL is required"):
+        with pytest.raises(ValueError, match="Either LLAMA_HF_MODEL or LLAMA_MODEL is required"):
             LlamaConfig.from_env()
 
-    def test_from_env_rejects_whitespace_only_model(self, monkeypatch):
-        monkeypatch.setenv("LLAMA_MODEL", "   ")
+    def test_from_env_rejects_both_set(self, monkeypatch):
+        monkeypatch.setenv("LLAMA_HF_MODEL", "philipsorst/gemma-4")
+        monkeypatch.setenv("LLAMA_MODEL", "/models/test.gguf")
 
-        with pytest.raises(ValueError, match="LLAMA_MODEL is required"):
+        with pytest.raises(ValueError, match="Only one of LLAMA_HF_MODEL or LLAMA_MODEL may be set"):
             LlamaConfig.from_env()
 
-    def test_from_env_with_no_extra_env_vars(self, monkeypatch):
-        monkeypatch.setenv("LLAMA_MODEL", "unsloth/gemma-4-26B-A4B-it-GGUF:UD-Q6_K_XL")
+    def test_from_env_with_local_model(self, monkeypatch):
+        monkeypatch.setenv("LLAMA_MODEL", "/models/test.gguf")
+        monkeypatch.delenv("LLAMA_HF_MODEL", raising=False)
         monkeypatch.delenv("HF_HOME", raising=False)
         monkeypatch.delenv("HF_TOKEN", raising=False)
         monkeypatch.delenv("LLAMA_CHAT_TEMPLATE_KWARGS", raising=False)
@@ -24,7 +27,34 @@ class TestLlamaConfig:
 
         config = LlamaConfig.from_env()
 
-        assert config.model == "unsloth/gemma-4-26B-A4B-it-GGUF:UD-Q6_K_XL"
+        assert config.model == "/models/test.gguf"
+        assert config.hf_model is None
+        assert config.ctx_size is None
+        assert config.n_gpu_layers is None
+        assert config.threads is None
+        assert config.temperature is None
+        assert config.top_p is None
+        assert config.top_k is None
+        assert config.port == 8080
+        assert config.n_parallel is None
+        assert config.extra_args is None
+        assert config.hf_home is None
+        assert config.hf_token is None
+        assert config.chat_template_kwargs is None
+        assert config.reasoning is None
+
+    def test_from_env_with_no_extra_env_vars(self, monkeypatch):
+        monkeypatch.setenv("LLAMA_HF_MODEL", "unsloth/gemma-4-26B-A4B-it-GGUF:UD-Q6_K_XL")
+        monkeypatch.delenv("LLAMA_MODEL", raising=False)
+        monkeypatch.delenv("HF_HOME", raising=False)
+        monkeypatch.delenv("HF_TOKEN", raising=False)
+        monkeypatch.delenv("LLAMA_CHAT_TEMPLATE_KWARGS", raising=False)
+        monkeypatch.delenv("LLAMA_REASONING", raising=False)
+
+        config = LlamaConfig.from_env()
+
+        assert config.hf_model == "unsloth/gemma-4-26B-A4B-it-GGUF:UD-Q6_K_XL"
+        assert config.model is None
         assert config.ctx_size is None
         assert config.n_gpu_layers is None
         assert config.threads is None
@@ -40,7 +70,8 @@ class TestLlamaConfig:
         assert config.reasoning is None
 
     def test_from_env_with_custom_values(self, monkeypatch):
-        monkeypatch.setenv("LLAMA_MODEL", "unsloth/gemma-4-26B-A4B-it-GGUF")
+        monkeypatch.setenv("LLAMA_HF_MODEL", "unsloth/gemma-4-26B-A4B-it-GGUF")
+        monkeypatch.setenv("LLAMA_MMPROJ", "/models/mmproj.gguf")
         monkeypatch.setenv("LLAMA_CONTEXT_SIZE", "8192")
         monkeypatch.setenv("LLAMA_N_GPU_LAYERS", "50")
         monkeypatch.setenv("LLAMA_THREADS", "16")
@@ -57,7 +88,9 @@ class TestLlamaConfig:
 
         config = LlamaConfig.from_env()
 
-        assert config.model == "unsloth/gemma-4-26B-A4B-it-GGUF"
+        assert config.hf_model == "unsloth/gemma-4-26B-A4B-it-GGUF"
+        assert config.model is None
+        assert config.mmproj == "/models/mmproj.gguf"
         assert config.ctx_size == 8192
         assert config.n_gpu_layers == 50
         assert config.threads == 16
@@ -73,7 +106,7 @@ class TestLlamaConfig:
         assert config.reasoning == "on"
 
     def test_reasoning_parses_variations(self, monkeypatch):
-        monkeypatch.setenv("LLAMA_MODEL", "test")
+        monkeypatch.setenv("LLAMA_HF_MODEL", "test")
 
         for val in ("on", "ON", "On", "1", "yes", "YES"):
             monkeypatch.setenv("LLAMA_REASONING", val)
@@ -84,7 +117,7 @@ class TestLlamaConfig:
             assert LlamaConfig.from_env().reasoning == "off", f"failed for {val!r}"
 
     def test_reasoning_invalid_value_raises(self, monkeypatch):
-        monkeypatch.setenv("LLAMA_MODEL", "test")
+        monkeypatch.setenv("LLAMA_HF_MODEL", "test")
         monkeypatch.setenv("LLAMA_REASONING", "maybe")
 
         with pytest.raises(ValueError, match="LLAMA_REASONING must be one of"):
@@ -92,7 +125,7 @@ class TestLlamaConfig:
 
     def test_to_args_uses_hf_flag(self):
         config = LlamaConfig(
-            model="unsloth/gemma-4-26B-A4B-it-GGUF:UD-Q6_K_XL",
+            hf_model="unsloth/gemma-4-26B-A4B-it-GGUF:UD-Q6_K_XL",
             ctx_size=2048,
             n_gpu_layers=32,
             temperature=0.7,
@@ -105,6 +138,7 @@ class TestLlamaConfig:
         args = config.to_args()
 
         assert "-hf" in args and "unsloth/gemma-4-26B-A4B-it-GGUF:UD-Q6_K_XL" in args
+        assert "--model" not in args
         assert "-c" in args and "2048" in args
         assert "-ngl" in args and "32" in args
         assert "--temp" in args and "0.7" in args
@@ -113,42 +147,79 @@ class TestLlamaConfig:
         assert "--port" in args and "8080" in args
         assert "-np" in args and "2" in args
 
+    def test_to_args_uses_model_flag_for_local_path(self):
+        config = LlamaConfig(
+            model="/models/test.gguf",
+            ctx_size=2048,
+            n_gpu_layers=32,
+            temperature=0.7,
+            top_p=0.9,
+            top_k=50,
+            port=8080,
+            n_parallel=2,
+        )
+
+        args = config.to_args()
+
+        assert "--model" in args and "/models/test.gguf" in args
+        assert "-hf" not in args
+        assert "-c" in args and "2048" in args
+        assert "-ngl" in args and "32" in args
+        assert "--temp" in args and "0.7" in args
+        assert "--top-p" in args and "0.9" in args
+        assert "--top-k" in args and "50" in args
+        assert "--port" in args and "8080" in args
+        assert "-np" in args and "2" in args
+
+    def test_to_args_with_mmproj(self):
+        config = LlamaConfig(
+            hf_model="test",
+            mmproj="/models/mmproj.gguf",
+        )
+        args = config.to_args()
+        assert "-hf" in args and "--mmproj" in args and "/models/mmproj.gguf" in args
+
+    def test_to_args_with_only_hf_model(self):
+        config = LlamaConfig(hf_model="unsloth/gemma-4-26B-A4B-it-GGUF")
+        args = config.to_args()
+        assert args == ["-hf", "unsloth/gemma-4-26B-A4B-it-GGUF"]
+
+    def test_to_args_with_only_local_model(self):
+        config = LlamaConfig(model="/models/test.gguf")
+        args = config.to_args()
+        assert args == ["--model", "/models/test.gguf"]
+
     def test_to_args_with_reasoning_on(self):
-        config = LlamaConfig(model="test", reasoning="on")
+        config = LlamaConfig(hf_model="test", reasoning="on")
         args = config.to_args()
         assert "--reasoning" in args and "on" in args
 
     def test_to_args_with_reasoning_off(self):
-        config = LlamaConfig(model="test", reasoning="off")
+        config = LlamaConfig(hf_model="test", reasoning="off")
         args = config.to_args()
         assert "--reasoning" in args and "off" in args
 
-    def test_to_args_with_only_model(self):
-        config = LlamaConfig(model="unsloth/gemma-4-26B-A4B-it-GGUF")
-        args = config.to_args()
-        assert args == ["-hf", "unsloth/gemma-4-26B-A4B-it-GGUF"]
-
     def test_to_args_with_threads(self):
-        config = LlamaConfig(model="test", threads=8)
+        config = LlamaConfig(hf_model="test", threads=8)
         args = config.to_args()
         assert "-t" in args and "8" in args
 
     def test_to_args_without_threads(self):
-        config = LlamaConfig(model="test", threads=None)
+        config = LlamaConfig(hf_model="test", threads=None)
         args = config.to_args()
         assert "-t" not in args
         assert "--reasoning" not in args
 
     def test_to_args_with_chat_template_kwargs(self):
         config = LlamaConfig(
-            model="test", chat_template_kwargs='{"enable_thinking":true}'
+            hf_model="test", chat_template_kwargs='{"enable_thinking":true}'
         )
         args = config.to_args()
         assert "--chat-template-kwargs" in args
         assert '{"enable_thinking":true}' in args
 
     def test_to_args_with_extra_args(self):
-        config = LlamaConfig(model="test", extra_args="--flash-attn on --embedding")
+        config = LlamaConfig(hf_model="test", extra_args="--flash-attn on --embedding")
         args = config.to_args()
         assert "--flash-attn" in args
         assert "on" in args
@@ -156,7 +227,7 @@ class TestLlamaConfig:
 
     def test_to_args_with_quoted_extra_args(self):
         config = LlamaConfig(
-            model="test",
+            hf_model="test",
             extra_args='--log-file "/tmp/path with spaces/server.log"',
         )
 
@@ -166,7 +237,7 @@ class TestLlamaConfig:
         assert "/tmp/path with spaces/server.log" in args
 
     def test_from_env_rejects_invalid_integer(self, monkeypatch):
-        monkeypatch.setenv("LLAMA_MODEL", "test")
+        monkeypatch.setenv("LLAMA_HF_MODEL", "test")
         monkeypatch.setenv("LLAMA_PORT", "nope")
 
         with pytest.raises(ValueError, match="LLAMA_PORT must be an integer"):
@@ -174,7 +245,7 @@ class TestLlamaConfig:
 
     def test_get_env_returns_hf_vars(self):
         config = LlamaConfig(
-            model="test",
+            hf_model="test",
             hf_home="/runpod-volume/huggingface-cache",
             hf_token="hf_123",
         )
@@ -183,7 +254,7 @@ class TestLlamaConfig:
         assert env["HF_TOKEN"] == "hf_123"
 
     def test_get_env_returns_empty_when_no_hf_vars(self):
-        config = LlamaConfig(model="test")
+        config = LlamaConfig(hf_model="test")
         env = config.get_env()
         assert env == {}
 

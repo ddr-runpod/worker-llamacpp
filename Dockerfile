@@ -1,5 +1,4 @@
 # Use the official llama.cpp CUDA server image as the base
-# llama-server and all shared libraries (libmtmd.so.0, etc.) are already present
 FROM ghcr.io/ggml-org/llama.cpp:server-cuda
 
 # Install Python 3, uv, and openssh-server

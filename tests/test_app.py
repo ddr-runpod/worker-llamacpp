@@ -21,7 +21,9 @@ def mock_llama_proxy():
 def client(mock_llama_proxy):
     with patch("app.LlamaConfig") as mock_config:
         mock_config.from_env.return_value = MagicMock(
+            hf_model=None,
             model="/models/test.gguf",
+            mmproj=None,
             ctx_size=4096,
             n_gpu_layers=99,
             threads=None,
@@ -31,7 +33,7 @@ def client(mock_llama_proxy):
             port=8080,
             n_parallel=1,
             extra_args=None,
-            to_args=MagicMock(return_value=["-m", "/models/test.gguf"]),
+            to_args=MagicMock(return_value=["--model", "/models/test.gguf"]),
         )
         with patch("app.AppConfig") as mock_app_config:
             mock_app_config.from_env.return_value = MagicMock(
