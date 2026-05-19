@@ -53,7 +53,7 @@ def _optional_float(name: str) -> Optional[float]:
         raise ValueError(f"{name} must be a number") from exc
 
 
-def _optional_bool(name: str) -> Optional[str]:
+def _optional_on_off(name: str) -> Optional[str]:
     val = os.getenv(name)
     if not val:
         return None
@@ -65,6 +65,8 @@ def _optional_bool(name: str) -> Optional[str]:
     raise ValueError(f"{name} must be one of: on, 1, yes, off, 0, no")
 
 
+LLAMA_PORT_DEFAULT = 8080
+HF_HOME_DEFAULT = "/runpod-volume/huggingface-cache"
 RUNPOD_CACHE_HUB = "/runpod-volume/huggingface-cache/hub"
 
 
@@ -152,33 +154,38 @@ class LlamaConfig:
 
     def to_args(self) -> list[str]:
         args = []
-        if self.hf_model:
-            args.extend(["-hf", self.hf_model])
-        if self.model:
-            args.extend(["--model", self.model])
-        if self.mmproj:
-            args.extend(["--mmproj", self.mmproj])
 
-        if self.ctx_size is not None:
-            args.extend(["-c", str(self.ctx_size)])
-        if self.n_gpu_layers is not None:
-            args.extend(["-ngl", str(self.n_gpu_layers)])
-        if self.threads is not None:
-            args.extend(["-t", str(self.threads)])
-        if self.temperature is not None:
-            args.extend(["--temp", str(self.temperature)])
-        if self.top_p is not None:
-            args.extend(["--top-p", str(self.top_p)])
-        if self.top_k is not None:
-            args.extend(["--top-k", str(self.top_k)])
-        if self.port is not None:
-            args.extend(["--port", str(self.port)])
-        if self.n_parallel is not None:
-            args.extend(["-np", str(self.n_parallel)])
-        if self.chat_template_kwargs is not None:
-            args.extend(["--chat-template-kwargs", self.chat_template_kwargs])
-        if self.reasoning is not None:
-            args.extend(["--reasoning", self.reasoning])
+        str_opts = [
+            ("-hf", self.hf_model),
+            ("--model", self.model),
+            ("--mmproj", self.mmproj),
+            ("--chat-template-kwargs", self.chat_template_kwargs),
+            ("--reasoning", self.reasoning),
+        ]
+        for flag, val in str_opts:
+            if val is not None:
+                args.extend([flag, val])
+
+        int_opts = [
+            ("-c", self.ctx_size),
+            ("-ngl", self.n_gpu_layers),
+            ("-t", self.threads),
+            ("--port", self.port),
+            ("-np", self.n_parallel),
+            ("--top-k", self.top_k),
+        ]
+        for flag, val in int_opts:
+            if val is not None:
+                args.extend([flag, str(val)])
+
+        float_opts = [
+            ("--temp", self.temperature),
+            ("--top-p", self.top_p),
+        ]
+        for flag, val in float_opts:
+            if val is not None:
+                args.extend([flag, str(val)])
+
         if self.extra_args is not None:
             args.extend(shlex.split(self.extra_args))
 
@@ -218,12 +225,12 @@ class LlamaConfig:
             ctx_size=_optional_int("LLAMA_CONTEXT_SIZE"),
             n_gpu_layers=_optional_int("LLAMA_N_GPU_LAYERS"),
             threads=_optional_int("LLAMA_THREADS"),
-            port=_optional_int("LLAMA_PORT") or 8080,
+            port=_optional_int("LLAMA_PORT") or LLAMA_PORT_DEFAULT,
             n_parallel=_optional_int("LLAMA_N_PARALLEL"),
-            hf_home=os.getenv("HF_HOME") or "/runpod-volume/huggingface-cache",
+            hf_home=os.getenv("HF_HOME") or HF_HOME_DEFAULT,
             hf_token=_optional_str("HF_TOKEN"),
             chat_template_kwargs=_optional_str("LLAMA_CHAT_TEMPLATE_KWARGS"),
-            reasoning=_optional_bool("LLAMA_REASONING"),
+            reasoning=_optional_on_off("LLAMA_REASONING"),
             extra_args=_optional_str("LLAMA_EXTRA_ARGS"),
         )
 

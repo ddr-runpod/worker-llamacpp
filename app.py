@@ -1,3 +1,4 @@
+import asyncio
 import json
 from contextlib import asynccontextmanager
 from typing import AsyncIterator, Mapping, Union
@@ -103,7 +104,7 @@ async def proxy(path: str, request: Request) -> Response:
     llama = app.state.llama
 
     headers = _filter_request_headers(request.headers)
-    content = await request.body()
+    content = await asyncio.wait_for(request.body(), timeout=30)
 
     is_streaming = _is_streaming_request(request, content)
 

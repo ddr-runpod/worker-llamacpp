@@ -2,6 +2,8 @@ import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from config import AppConfig, LlamaConfig
+
 
 @pytest.fixture
 def mock_llama_proxy():
@@ -19,28 +21,19 @@ def mock_llama_proxy():
 
 @pytest.fixture
 def client(mock_llama_proxy):
-    with patch("app.LlamaConfig") as mock_config:
-        mock_config.from_env.return_value = MagicMock(
-            hf_model=None,
-            model="/models/test.gguf",
-            mmproj=None,
-            ctx_size=4096,
-            n_gpu_layers=99,
-            threads=None,
-            temperature=0.8,
-            top_p=0.95,
-            top_k=40,
-            port=8080,
-            n_parallel=1,
-            extra_args=None,
-            to_args=MagicMock(return_value=["--model", "/models/test.gguf"]),
-        )
-        with patch("app.AppConfig") as mock_app_config:
-            mock_app_config.from_env.return_value = MagicMock(
-                port=80,
-                llama_host="127.0.0.1",
-                llama_connect_host="127.0.0.1",
-            )
+    with patch("app.LlamaConfig.from_env", return_value=LlamaConfig(
+        model="/models/test.gguf",
+        ctx_size=4096,
+        n_gpu_layers=99,
+        temperature=0.8,
+        top_p=0.95,
+        top_k=40,
+        port=8080,
+        n_parallel=1,
+    )):
+        with patch("app.AppConfig.from_env", return_value=AppConfig(
+            port=80,
+        )):
             from app import app
 
             with TestClient(app) as test_client:

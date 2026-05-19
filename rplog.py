@@ -5,6 +5,11 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 from uuid import uuid4
 
+LOG_LEVELS = {"DEBUG": 0, "INFO": 1, "WARN": 2, "ERROR": 3}
+DEFAULT_SERVICE_NAME = "worker-llamacpp"
+DEFAULT_SERVICE_VERSION = "unknown"
+DEFAULT_ENV = "unknown"
+
 
 class Logger:
     def __init__(
@@ -13,18 +18,21 @@ class Logger:
         service_version: Optional[str] = None,
     ):
         self.service_name = service_name or os.getenv(
-            "RUNPOD_SERVICE_NAME", "worker-llamacpp"
+            "RUNPOD_SERVICE_NAME", DEFAULT_SERVICE_NAME
         )
         self.service_version = service_version or os.getenv(
-            "RUNPOD_SERVICE_VERSION", "unknown"
+            "RUNPOD_SERVICE_VERSION", DEFAULT_SERVICE_VERSION
         )
-        self.log_level = os.getenv("LOG_LEVEL", "INFO")
-        self.env = os.getenv("ENV", "unknown")
+        raw_level = os.getenv("LOG_LEVEL", "INFO").upper()
+        self.log_level = raw_level if raw_level in LOG_LEVELS else "INFO"
+        self._level_value = LOG_LEVELS[self.log_level]
+        self.env = os.getenv("ENV", DEFAULT_ENV)
         self._instance_id = uuid4().hex[:8]
         self._service_start = datetime.now(timezone.utc).isoformat()
 
     def _log(self, level: str, message: str, extra: Optional[dict] = None) -> None:
-        if level == "DEBUG" and self.log_level != "DEBUG":
+        level_value = LOG_LEVELS.get(level, 0)
+        if level_value < self._level_value:
             return
 
         log_obj: dict[str, Any] = {

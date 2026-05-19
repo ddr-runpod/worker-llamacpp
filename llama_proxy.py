@@ -78,22 +78,21 @@ class LlamaProxy:
             raise
 
     async def _wait_for_server(self, timeout: int = 300) -> None:
-        async with httpx.AsyncClient(base_url=self.base_url, timeout=10.0) as client:
-            for _ in range(timeout):
-                if self.process is None:
-                    raise RuntimeError("llama-server process is not running")
+        for _ in range(timeout):
+            if self.process is None:
+                raise RuntimeError("llama-server process is not running")
 
-                exit_code = self.process.poll()
-                if exit_code is not None:
-                    raise RuntimeError(self._format_startup_failure(exit_code))
+            exit_code = self.process.poll()
+            if exit_code is not None:
+                raise RuntimeError(self._format_startup_failure(exit_code))
 
-                try:
-                    response = await client.get("/health")
-                    if response.status_code == 200:
-                        return
-                except (httpx.ConnectError, httpx.TimeoutException):
-                    pass
-                await asyncio.sleep(1)
+            try:
+                response = await self.client.get("/health", timeout=10.0)
+                if response.status_code == 200:
+                    return
+            except (httpx.ConnectError, httpx.TimeoutException):
+                pass
+            await asyncio.sleep(1)
         raise RuntimeError(
             self._format_startup_failure(reason="timed out waiting for /health")
         )
