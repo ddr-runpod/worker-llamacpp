@@ -13,7 +13,7 @@ def _dump_volume_tree() -> None:
     sys.stderr.write(f"[ERROR] Contents of {root}:\n")
     for dirpath, dirnames, filenames in os.walk(root):
         level = dirpath.replace(root, "").count(os.sep)
-        if level > 6:
+        if level > 7:
             continue
         indent = "  " * level
         sys.stderr.write(f"{indent}{os.path.basename(dirpath) or 'runpod-volume'}/\n")
@@ -65,11 +65,53 @@ def _optional_bool(name: str) -> Optional[str]:
     raise ValueError(f"{name} must be one of: on, 1, yes, off, 0, no")
 
 
+RUNPOD_CACHE_HUB = "/runpod-volume/huggingface-cache/hub"
+
+
+def resolve_runpod_cache_path(path: str, hub_root: Optional[str] = None) -> str:
+    if hub_root is None:
+        hub_root = RUNPOD_CACHE_HUB
+    parts = path.split("/")
+    if len(parts) != 3:
+        raise ValueError(
+            f"RunPod cache path must be in 'org/name/filename' format, got: {path}"
+        )
+    org, name, filename = parts
+    cache_dir = os.path.join(hub_root, f"models--{org}--{name}")
+    refs_file = os.path.join(cache_dir, "refs", "main")
+    snapshots_dir = os.path.join(cache_dir, "snapshots")
+
+    snapshot_hash = None
+    if os.path.isfile(refs_file):
+        with open(refs_file) as f:
+            snapshot_hash = f.read().strip()
+
+    if not snapshot_hash and os.path.isdir(snapshots_dir):
+        versions = sorted(
+            d for d in os.listdir(snapshots_dir)
+            if os.path.isdir(os.path.join(snapshots_dir, d))
+        )
+        if versions:
+            snapshot_hash = versions[0]
+
+    if not snapshot_hash:
+        _dump_volume_tree()
+        raise FileNotFoundError(
+            f"RunPod cached model not found for {path}. "
+            f"Checked {cache_dir}. "
+            "Make sure the Model field is set in the RunPod endpoint configuration."
+        )
+
+    return os.path.join(snapshots_dir, snapshot_hash, filename)
+
+
 @dataclass
 class LlamaConfig:
     hf_model: Optional[str] = None
     model: Optional[str] = None
     mmproj: Optional[str] = None
+    model_runpod_cache: Optional[str] = None
+    mmproj_runpod_cache: Optional[str] = None
     temperature: Optional[float] = None
     top_p: Optional[float] = None
     top_k: Optional[int] = None
@@ -85,10 +127,28 @@ class LlamaConfig:
     extra_args: Optional[str] = None
 
     def __post_init__(self) -> None:
-        if not self.hf_model and not self.model:
-            raise ValueError("Either LLAMA_HF_MODEL or LLAMA_MODEL is required")
-        if self.hf_model and self.model:
-            raise ValueError("Only one of LLAMA_HF_MODEL or LLAMA_MODEL may be set")
+        sources = [self.hf_model, self.model, self.model_runpod_cache]
+        set_count = sum(1 for s in sources if s is not None)
+        if set_count == 0:
+            raise ValueError(
+                "One of LLAMA_HF_MODEL, LLAMA_MODEL, or LLAMA_MODEL_RUNPOD_CACHE is required"
+            )
+        if set_count > 1:
+            raise ValueError(
+                "Only one of LLAMA_HF_MODEL, LLAMA_MODEL, or LLAMA_MODEL_RUNPOD_CACHE may be set"
+            )
+        if self.mmproj and self.mmproj_runpod_cache:
+            raise ValueError(
+                "Only one of LLAMA_MMPROJ or LLAMA_MMPROJ_RUNPOD_CACHE may be set"
+            )
+
+    def resolve(self) -> None:
+        if self.model_runpod_cache:
+            self.model = resolve_runpod_cache_path(self.model_runpod_cache)
+            self.model_runpod_cache = None
+        if self.mmproj_runpod_cache:
+            self.mmproj = resolve_runpod_cache_path(self.mmproj_runpod_cache)
+            self.mmproj_runpod_cache = None
 
     def to_args(self) -> list[str]:
         args = []
@@ -150,6 +210,8 @@ class LlamaConfig:
             hf_model=_optional_str("LLAMA_HF_MODEL"),
             model=_optional_str("LLAMA_MODEL"),
             mmproj=_optional_str("LLAMA_MMPROJ"),
+            model_runpod_cache=_optional_str("LLAMA_MODEL_RUNPOD_CACHE"),
+            mmproj_runpod_cache=_optional_str("LLAMA_MMPROJ_RUNPOD_CACHE"),
             temperature=_optional_float("LLAMA_TEMPERATURE"),
             top_p=_optional_float("LLAMA_TOP_P"),
             top_k=_optional_int("LLAMA_TOP_K"),
@@ -158,7 +220,7 @@ class LlamaConfig:
             threads=_optional_int("LLAMA_THREADS"),
             port=_optional_int("LLAMA_PORT") or 8080,
             n_parallel=_optional_int("LLAMA_N_PARALLEL"),
-            hf_home=_optional_str("HF_HOME"),
+            hf_home=os.getenv("HF_HOME") or "/runpod-volume/huggingface-cache",
             hf_token=_optional_str("HF_TOKEN"),
             chat_template_kwargs=_optional_str("LLAMA_CHAT_TEMPLATE_KWARGS"),
             reasoning=_optional_bool("LLAMA_REASONING"),

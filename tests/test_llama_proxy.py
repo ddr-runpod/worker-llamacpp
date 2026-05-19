@@ -14,11 +14,13 @@ def proxy():
 
 class TestStart:
     @pytest.mark.asyncio
-    async def test_calls_validate_files(self, proxy):
+    async def test_calls_resolve_then_validate_files(self, proxy):
         with (
+            patch.object(proxy.llama_config, "resolve") as mock_resolve,
             patch.object(proxy.llama_config, "validate_files") as mock_validate,
             patch.object(proxy, "_wait_for_server"),
             patch("llama_proxy.subprocess.Popen"),
         ):
             await proxy.start()
+            mock_resolve.assert_called_once()
             mock_validate.assert_called_once()

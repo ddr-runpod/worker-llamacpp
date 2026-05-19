@@ -1,5 +1,6 @@
+import os
 import pytest
-from config import AppConfig, LlamaConfig
+from config import AppConfig, LlamaConfig, resolve_runpod_cache_path
 
 
 class TestLlamaConfig:
@@ -7,14 +8,14 @@ class TestLlamaConfig:
         monkeypatch.delenv("LLAMA_HF_MODEL", raising=False)
         monkeypatch.delenv("LLAMA_MODEL", raising=False)
 
-        with pytest.raises(ValueError, match="Either LLAMA_HF_MODEL or LLAMA_MODEL is required"):
+        with pytest.raises(ValueError, match="One of LLAMA_HF_MODEL, LLAMA_MODEL, or LLAMA_MODEL_RUNPOD_CACHE is required"):
             LlamaConfig.from_env()
 
     def test_from_env_rejects_both_set(self, monkeypatch):
         monkeypatch.setenv("LLAMA_HF_MODEL", "philipsorst/gemma-4")
         monkeypatch.setenv("LLAMA_MODEL", "/models/test.gguf")
 
-        with pytest.raises(ValueError, match="Only one of LLAMA_HF_MODEL or LLAMA_MODEL may be set"):
+        with pytest.raises(ValueError, match="Only one of LLAMA_HF_MODEL, LLAMA_MODEL, or LLAMA_MODEL_RUNPOD_CACHE may be set"):
             LlamaConfig.from_env()
 
     def test_from_env_with_local_model(self, monkeypatch):
@@ -38,7 +39,7 @@ class TestLlamaConfig:
         assert config.port == 8080
         assert config.n_parallel is None
         assert config.extra_args is None
-        assert config.hf_home is None
+        assert config.hf_home == "/runpod-volume/huggingface-cache"
         assert config.hf_token is None
         assert config.chat_template_kwargs is None
         assert config.reasoning is None
@@ -64,7 +65,7 @@ class TestLlamaConfig:
         assert config.port == 8080
         assert config.n_parallel is None
         assert config.extra_args is None
-        assert config.hf_home is None
+        assert config.hf_home == "/runpod-volume/huggingface-cache"
         assert config.hf_token is None
         assert config.chat_template_kwargs is None
         assert config.reasoning is None
@@ -279,6 +280,149 @@ class TestLlamaConfig:
     def test_validate_files_skips_check_when_using_hf_model(self):
         config = LlamaConfig(hf_model="test")
         config.validate_files()
+
+    def test_from_env_with_runpod_cache_model(self, monkeypatch):
+        monkeypatch.setenv("LLAMA_MODEL_RUNPOD_CACHE", "org/test/model.gguf")
+        monkeypatch.delenv("LLAMA_HF_MODEL", raising=False)
+        monkeypatch.delenv("LLAMA_MODEL", raising=False)
+
+        config = LlamaConfig.from_env()
+
+        assert config.model_runpod_cache == "org/test/model.gguf"
+        assert config.model is None
+        assert config.hf_model is None
+
+    def test_from_env_rejects_both_runpod_cache_and_other_source(self, monkeypatch):
+        monkeypatch.setenv("LLAMA_HF_MODEL", "org/test")
+        monkeypatch.setenv("LLAMA_MODEL_RUNPOD_CACHE", "org/test/model.gguf")
+
+        with pytest.raises(ValueError, match="Only one of"):
+            LlamaConfig.from_env()
+
+    def test_from_env_rejects_runpod_cache_with_local_model(self, monkeypatch):
+        monkeypatch.setenv("LLAMA_MODEL", "/models/test.gguf")
+        monkeypatch.setenv("LLAMA_MODEL_RUNPOD_CACHE", "org/test/model.gguf")
+
+        with pytest.raises(ValueError, match="Only one of"):
+            LlamaConfig.from_env()
+
+    def test_from_env_rejects_both_mmproj_options(self, monkeypatch):
+        monkeypatch.setenv("LLAMA_HF_MODEL", "test")
+        monkeypatch.setenv("LLAMA_MMPROJ", "/models/mmproj.gguf")
+        monkeypatch.setenv("LLAMA_MMPROJ_RUNPOD_CACHE", "org/test/mmproj.gguf")
+
+        with pytest.raises(ValueError, match="Only one of LLAMA_MMPROJ or LLAMA_MMPROJ_RUNPOD_CACHE"):
+            LlamaConfig.from_env()
+
+    def _make_cache(self, tmp_path, org="org", name="test", hash="abc123", files=None):
+        model_dir = tmp_path / f"models--{org}--{name}"
+        snap_dir = model_dir / "snapshots" / hash
+        snap_dir.mkdir(parents=True)
+        if files:
+            for f in files:
+                (snap_dir / f).write_bytes(b"dummy")
+        refs_dir = model_dir / "refs"
+        refs_dir.mkdir()
+        (refs_dir / "main").write_text(hash + "\n")
+        return model_dir
+
+    def test_resolve_clears_model_runpod_cache_and_sets_model(
+        self, tmp_path, monkeypatch
+    ):
+        cache = self._make_cache(tmp_path, files=["test.gguf"])
+        model_file = cache / "snapshots" / "abc123" / "test.gguf"
+        monkeypatch.setattr("config.RUNPOD_CACHE_HUB", str(tmp_path))
+
+        config = LlamaConfig(model_runpod_cache="org/test/test.gguf")
+        config.resolve()
+
+        assert config.model == str(model_file)
+        assert config.model_runpod_cache is None
+
+    def test_resolve_with_mmproj(self, tmp_path, monkeypatch):
+        cache = self._make_cache(tmp_path, hash="def456", files=["mmproj.gguf"])
+        mmproj_file = cache / "snapshots" / "def456" / "mmproj.gguf"
+        monkeypatch.setattr("config.RUNPOD_CACHE_HUB", str(tmp_path))
+
+        config = LlamaConfig(
+            hf_model="test",
+            mmproj_runpod_cache="org/test/mmproj.gguf",
+        )
+        config.resolve()
+
+        assert config.mmproj == str(mmproj_file)
+        assert config.mmproj_runpod_cache is None
+
+    def test_constructor_rejects_both_mmproj_options(self):
+        with pytest.raises(ValueError, match="Only one of LLAMA_MMPROJ or LLAMA_MMPROJ_RUNPOD_CACHE"):
+            LlamaConfig(
+                hf_model="test",
+                mmproj="/models/mmproj.gguf",
+                mmproj_runpod_cache="org/test/mmproj.gguf",
+            )
+
+    def test_resolve_skipped_when_no_runpod_cache_set(self):
+        config = LlamaConfig(hf_model="test")
+        config.resolve()
+        assert config.model is None
+        assert config.mmproj is None
+
+    def test_to_args_with_runpod_cache_after_resolve(self, tmp_path, monkeypatch):
+        cache = self._make_cache(tmp_path, hash="xyz789", files=["test.gguf"])
+        model_file = cache / "snapshots" / "xyz789" / "test.gguf"
+        monkeypatch.setattr("config.RUNPOD_CACHE_HUB", str(tmp_path))
+
+        config = LlamaConfig(
+            model_runpod_cache="org/test/test.gguf",
+            ctx_size=4096,
+        )
+        config.resolve()
+        args = config.to_args()
+
+        assert "--model" in args and str(model_file) in args
+        assert "-hf" not in args
+
+
+class TestResolveRunpodCachePath:
+    def _make_cache(self, tmp_path, org="org", name="test", hash="abc123", files=None):
+        model_dir = tmp_path / f"models--{org}--{name}"
+        snap_dir = model_dir / "snapshots" / hash
+        snap_dir.mkdir(parents=True)
+        if files:
+            for f in files:
+                (snap_dir / f).write_bytes(b"dummy")
+        refs_dir = model_dir / "refs"
+        refs_dir.mkdir()
+        (refs_dir / "main").write_text(hash + "\n")
+        return model_dir
+
+    def test_resolves_from_refs_main(self, tmp_path):
+        self._make_cache(tmp_path, files=["model.gguf"])
+        result = resolve_runpod_cache_path("org/test/model.gguf", hub_root=str(tmp_path))
+        assert result == str(tmp_path / "models--org--test" / "snapshots" / "abc123" / "model.gguf")
+
+    def test_falls_back_to_sorted_snapshots(self, tmp_path):
+        model_dir = tmp_path / "models--org--test"
+        snap_dir = model_dir / "snapshots"
+        snap_dir.mkdir(parents=True)
+        (snap_dir / "002").mkdir()
+        (snap_dir / "001").mkdir()
+        (snap_dir / "001" / "model.gguf").write_bytes(b"dummy")
+
+        result = resolve_runpod_cache_path("org/test/model.gguf", hub_root=str(tmp_path))
+        assert result == str(snap_dir / "001" / "model.gguf")
+
+    def test_raises_when_not_found(self, tmp_path):
+        with pytest.raises(FileNotFoundError, match="RunPod cached model not found"):
+            resolve_runpod_cache_path("org/test/model.gguf", hub_root=str(tmp_path))
+
+    def test_raises_on_invalid_format(self):
+        with pytest.raises(ValueError, match="must be in 'org/name/filename' format"):
+            resolve_runpod_cache_path("invalid", hub_root="/ignored")
+
+    def test_raises_on_too_many_parts(self):
+        with pytest.raises(ValueError, match="must be in 'org/name/filename' format"):
+            resolve_runpod_cache_path("a/b/c/d.gguf", hub_root="/ignored")
 
 
 class TestAppConfig:

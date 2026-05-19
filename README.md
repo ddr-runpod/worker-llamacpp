@@ -60,15 +60,15 @@ docker push ddr-runpod/worker-llamacpp
 
    | Variable | Required | Example |
    |----------|----------|---------|
-   | `LLAMA_HF_MODEL` or `LLAMA_MODEL` | Yes (choose one) | `philipsorst/gemma-4-26B-A4B-it-UD-Q6_K_XL` or `/runpod-volume/.../model.gguf` |
-   | `HF_HOME` | No | `/runpod-volume/huggingface-cache` |
+   | `LLAMA_HF_MODEL`, `LLAMA_MODEL`, or `LLAMA_MODEL_RUNPOD_CACHE` | Yes (choose one) | `philipsorst/gemma-4-26B-A4B-it-UD-Q6_K_XL`, `/runpod-volume/.../model.gguf`, or `org/name/file.gguf` |
+   | `HF_HOME` | No (has default) | `/runpod-volume/huggingface-cache` |
    | `HF_TOKEN` | No | Your HuggingFace token (for gated models) |
 
    See [docs/env.md](docs/env.md) for all optional environment variables.
 
 ### 3. First Request
 
-When using `LLAMA_HF_MODEL`, llama.cpp will automatically download the model from HuggingFace to the network volume on the first request. When using `LLAMA_MODEL`, the local GGUF file is loaded immediately.
+When using `LLAMA_HF_MODEL`, llama.cpp will automatically download the model from HuggingFace to the network volume on the first request. When using `LLAMA_MODEL`, the local GGUF file is loaded immediately. When using `LLAMA_MODEL_RUNPOD_CACHE`, the path auto-resolves via `refs/main` to the correct snapshot.
 
 Subsequent requests will use the cached model.
 
@@ -78,10 +78,10 @@ See `docs/env.md` for the full environment variable reference.
 
 Important behavior:
 
-- `LLAMA_HF_MODEL` or `LLAMA_MODEL` is required and validated as XOR (exactly one must be set)
+- `LLAMA_HF_MODEL`, `LLAMA_MODEL`, or `LLAMA_MODEL_RUNPOD_CACHE` is required and validated as XOR (exactly one must be set)
 - `LLAMA_HF_MODEL` is passed via `-hf` flag for HuggingFace auto-download
-- `LLAMA_MODEL` is passed via `--model` flag for local GGUF file paths
-- `LLAMA_MMPROJ` is passed via `--mmproj` flag for multimodal projection files
+- `LLAMA_MODEL` and `LLAMA_MODEL_RUNPOD_CACHE` are passed via `--model` flag for local GGUF file paths
+- `LLAMA_MMPROJ` and `LLAMA_MMPROJ_RUNPOD_CACHE` are passed via `--mmproj` flag for multimodal projection files
 - `LLAMA_EXTRA_ARGS` supports shell-style quoting
 - If `LLAMA_HOST` uses a wildcard bind such as `0.0.0.0`, the proxy connects through `127.0.0.1` unless `LLAMA_CONNECT_HOST` is set
 
