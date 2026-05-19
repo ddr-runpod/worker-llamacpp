@@ -1,7 +1,24 @@
 import os
 import shlex
+import sys
 from dataclasses import dataclass
 from typing import Optional
+
+
+def _dump_volume_tree() -> None:
+    root = "/runpod-volume"
+    if not os.path.isdir(root):
+        sys.stderr.write(f"[ERROR] {root} does not exist or is not a directory\n")
+        return
+    sys.stderr.write(f"[ERROR] Contents of {root}:\n")
+    for dirpath, dirnames, filenames in os.walk(root):
+        level = dirpath.replace(root, "").count(os.sep)
+        if level > 6:
+            continue
+        indent = "  " * level
+        sys.stderr.write(f"{indent}{os.path.basename(dirpath) or 'runpod-volume'}/\n")
+        for name in sorted(filenames):
+            sys.stderr.write(f"{indent}  {name}\n")
 
 
 def _required_str(name: str) -> str:
@@ -106,6 +123,18 @@ class LlamaConfig:
             args.extend(shlex.split(self.extra_args))
 
         return args
+
+    def validate_files(self) -> None:
+        if self.model and not os.path.isfile(self.model):
+            _dump_volume_tree()
+            raise FileNotFoundError(
+                f"LLAMA_MODEL file not found: {self.model}"
+            )
+        if self.mmproj and not os.path.isfile(self.mmproj):
+            _dump_volume_tree()
+            raise FileNotFoundError(
+                f"LLAMA_MMPROJ file not found: {self.mmproj}"
+            )
 
     def get_env(self) -> dict:
         env = {}

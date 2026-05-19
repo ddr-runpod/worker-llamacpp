@@ -258,6 +258,28 @@ class TestLlamaConfig:
         env = config.get_env()
         assert env == {}
 
+    def test_validate_files_raises_for_missing_model(self):
+        config = LlamaConfig(model="/nonexistent/model.gguf")
+        with pytest.raises(FileNotFoundError, match="LLAMA_MODEL file not found"):
+            config.validate_files()
+
+    def test_validate_files_raises_for_missing_mmproj(self):
+        config = LlamaConfig(hf_model="test", mmproj="/nonexistent/mmproj.gguf")
+        with pytest.raises(FileNotFoundError, match="LLAMA_MMPROJ file not found"):
+            config.validate_files()
+
+    def test_validate_files_passes_for_existing_files(self, tmp_path):
+        model = tmp_path / "model.gguf"
+        model.write_bytes(b"dummy")
+        mmproj = tmp_path / "mmproj.gguf"
+        mmproj.write_bytes(b"dummy")
+        config = LlamaConfig(model=str(model), mmproj=str(mmproj))
+        config.validate_files()
+
+    def test_validate_files_skips_check_when_using_hf_model(self):
+        config = LlamaConfig(hf_model="test")
+        config.validate_files()
+
 
 class TestAppConfig:
     def test_port_required(self, monkeypatch):

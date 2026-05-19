@@ -45,6 +45,8 @@ class LlamaProxy:
         if self.process is not None:
             return
 
+        self.llama_config.validate_files()
+
         args = [
             self._llama_server_path,
             "--host",
