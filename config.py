@@ -126,6 +126,9 @@ class LlamaConfig:
     hf_token: Optional[str] = None
     chat_template_kwargs: Optional[str] = None
     reasoning: Optional[str] = None
+    flash_attn: Optional[str] = None
+    batch_size: Optional[int] = None
+    ubatch_size: Optional[int] = None
     spec_draft_model: Optional[str] = None
     spec_draft_model_runpod_cache: Optional[str] = None
     spec_type: Optional[str] = None
@@ -174,6 +177,7 @@ class LlamaConfig:
             ("--mmproj", self.mmproj),
             ("--chat-template-kwargs", self.chat_template_kwargs),
             ("--reasoning", self.reasoning),
+            ("--flash-attn", self.flash_attn),
             ("--spec-draft-model", self.spec_draft_model),
             ("--spec-type", self.spec_type),
         ]
@@ -188,6 +192,8 @@ class LlamaConfig:
             ("--port", self.port),
             ("-np", self.n_parallel),
             ("--top-k", self.top_k),
+            ("-b", self.batch_size),
+            ("-ub", self.ubatch_size),
             ("--spec-draft-n-max", self.spec_draft_n_max),
         ]
         for flag, val in int_opts:
@@ -252,6 +258,9 @@ class LlamaConfig:
             hf_token=_optional_str("HF_TOKEN"),
             chat_template_kwargs=_optional_str("LLAMA_CHAT_TEMPLATE_KWARGS"),
             reasoning=_optional_on_off("LLAMA_REASONING"),
+            flash_attn=_optional_on_off("LLAMA_FLASH_ATTN"),
+            batch_size=_optional_int("LLAMA_BATCH_SIZE"),
+            ubatch_size=_optional_int("LLAMA_UBATCH_SIZE"),
             spec_draft_model=_optional_str("LLAMA_SPEC_DRAFT_MODEL"),
             spec_draft_model_runpod_cache=_optional_str(
                 "LLAMA_SPEC_DRAFT_MODEL_RUNPOD_CACHE"

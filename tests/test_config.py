@@ -43,6 +43,9 @@ class TestLlamaConfig:
         assert config.hf_token is None
         assert config.chat_template_kwargs is None
         assert config.reasoning is None
+        assert config.flash_attn is None
+        assert config.batch_size is None
+        assert config.ubatch_size is None
         assert config.spec_draft_model is None
         assert config.spec_draft_model_runpod_cache is None
         assert config.spec_type is None
@@ -73,6 +76,9 @@ class TestLlamaConfig:
         assert config.hf_token is None
         assert config.chat_template_kwargs is None
         assert config.reasoning is None
+        assert config.flash_attn is None
+        assert config.batch_size is None
+        assert config.ubatch_size is None
         assert config.spec_draft_model is None
         assert config.spec_draft_model_runpod_cache is None
         assert config.spec_type is None
@@ -113,6 +119,9 @@ class TestLlamaConfig:
         assert config.hf_token == "hf_token123"
         assert config.chat_template_kwargs == '{"enable_thinking":true}'
         assert config.reasoning == "on"
+        assert config.flash_attn is None
+        assert config.batch_size is None
+        assert config.ubatch_size is None
         assert config.spec_draft_model is None
         assert config.spec_draft_model_runpod_cache is None
         assert config.spec_type is None
@@ -512,6 +521,68 @@ class TestLlamaConfig:
         draft.write_bytes(b"dummy")
         config = LlamaConfig(model=str(model), spec_draft_model=str(draft))
         config.validate_files()
+
+    def test_from_env_with_flash_attn_on(self, monkeypatch):
+        monkeypatch.setenv("LLAMA_HF_MODEL", "test")
+        monkeypatch.setenv("LLAMA_FLASH_ATTN", "on")
+
+        config = LlamaConfig.from_env()
+
+        assert config.flash_attn == "on"
+
+    def test_from_env_with_flash_attn_off(self, monkeypatch):
+        monkeypatch.setenv("LLAMA_HF_MODEL", "test")
+        monkeypatch.setenv("LLAMA_FLASH_ATTN", "off")
+
+        config = LlamaConfig.from_env()
+
+        assert config.flash_attn == "off"
+
+    def test_flash_attn_invalid_value_raises(self, monkeypatch):
+        monkeypatch.setenv("LLAMA_HF_MODEL", "test")
+        monkeypatch.setenv("LLAMA_FLASH_ATTN", "auto")
+
+        with pytest.raises(ValueError, match="LLAMA_FLASH_ATTN must be one of"):
+            LlamaConfig.from_env()
+
+    def test_from_env_with_batch_size(self, monkeypatch):
+        monkeypatch.setenv("LLAMA_HF_MODEL", "test")
+        monkeypatch.setenv("LLAMA_BATCH_SIZE", "512")
+
+        config = LlamaConfig.from_env()
+
+        assert config.batch_size == 512
+
+    def test_from_env_with_ubatch_size(self, monkeypatch):
+        monkeypatch.setenv("LLAMA_HF_MODEL", "test")
+        monkeypatch.setenv("LLAMA_UBATCH_SIZE", "512")
+
+        config = LlamaConfig.from_env()
+
+        assert config.ubatch_size == 512
+
+    def test_to_args_emits_flash_attn_batch_and_ubatch(self):
+        config = LlamaConfig(
+            hf_model="test",
+            flash_attn="on",
+            batch_size=512,
+            ubatch_size=512,
+        )
+
+        args = config.to_args()
+
+        assert "--flash-attn" in args and "on" in args
+        assert "-b" in args and "512" in args
+        assert "-ub" in args and "512" in args
+
+    def test_to_args_without_batch_and_ubatch_omits_flags(self):
+        config = LlamaConfig(hf_model="test")
+
+        args = config.to_args()
+
+        assert "--flash-attn" not in args
+        assert "-b" not in args
+        assert "-ub" not in args
 
 
 class TestResolveRunpodCachePath:

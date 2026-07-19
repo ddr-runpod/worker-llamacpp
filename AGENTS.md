@@ -61,6 +61,7 @@ Important runtime behavior:
 - `LLAMA_MODEL_RUNPOD_CACHE` and `LLAMA_MMPROJ_RUNPOD_CACHE` auto-resolve to the correct snapshot directory by reading the model's `refs/main` hash.
 - `LLAMA_SPEC_DRAFT_MODEL` and `LLAMA_SPEC_DRAFT_MODEL_RUNPOD_CACHE` map to `--spec-draft-model` for speculative decoding.
 - `LLAMA_SPEC_TYPE` is passed verbatim via `--spec-type`; `LLAMA_SPEC_DRAFT_N_MAX` maps to `--spec-draft-n-max`.
+- `LLAMA_FLASH_ATTN` is passed via `--flash-attn` (boolean: `on`/`off`); `LLAMA_BATCH_SIZE` maps to `-b`; `LLAMA_UBATCH_SIZE` maps to `-ub`. Continuous batching (`--cont-batching`) is on by default upstream and not exposed.
 - `LLAMA_EXTRA_ARGS` is parsed with shell-style quoting, so values containing spaces should be quoted.
 - If `LLAMA_HOST` is `0.0.0.0` or `::`, the proxy defaults `LLAMA_CONNECT_HOST` to `127.0.0.1` unless explicitly overridden.
 

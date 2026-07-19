@@ -46,6 +46,14 @@ Exactly one of `LLAMA_HF_MODEL`, `LLAMA_MODEL`, or `LLAMA_MODEL_RUNPOD_CACHE` mu
 |----------|-------------|
 | `LLAMA_CHAT_TEMPLATE_KWARGS` | JSON string for chat template, e.g., `'{"enable_thinking":true}'` |
 
+## Batch Size & Attention (Optional)
+
+| Variable | Description |
+|----------|-------------|
+| `LLAMA_FLASH_ATTN` | Enable/disable Flash Attention. Accepted values: `on`, `1`, `yes`, `off`, `0`, `no` (case-insensitive). Passed via `--flash-attn` flag. Upstream default: `auto`. |
+| `LLAMA_BATCH_SIZE` | Logical maximum batch size for prompt processing. Passed via `-b` flag. Upstream default: `2048`. |
+| `LLAMA_UBATCH_SIZE` | Physical (unbatched) maximum batch size for generation. Passed via `-ub` flag. Upstream default: `512`. |
+
 ## Multimodal (Optional)
 
 | Variable | Description |
@@ -98,6 +106,8 @@ The worker outputs structured JSON logs to stderr, which RunPod captures automat
 - `LLAMA_MMPROJ` and `LLAMA_MMPROJ_RUNPOD_CACHE` are passed via `--mmproj` flag for multimodal projection files.
 - `LLAMA_SPEC_DRAFT_MODEL` and `LLAMA_SPEC_DRAFT_MODEL_RUNPOD_CACHE` are passed via `--spec-draft-model` flag for speculative decoding draft models.
 - `LLAMA_SPEC_TYPE` is passed verbatim via `--spec-type` flag. `LLAMA_SPEC_DRAFT_N_MAX` is passed via `--spec-draft-n-max` flag.
+- `LLAMA_FLASH_ATTN` is passed via `--flash-attn` flag (boolean). `LLAMA_BATCH_SIZE` is passed via `-b` flag; `LLAMA_UBATCH_SIZE` is passed via `-ub` flag.
+- Continuous batching (`--cont-batching`) is enabled by default upstream and intentionally not exposed as an env var.
 - `HF_HOME` defaults to `/runpod-volume/huggingface-cache` when not set.
 - If `LLAMA_HOST` is `0.0.0.0` or `::`, the proxy automatically connects to `127.0.0.1` unless `LLAMA_CONNECT_HOST` is set.
 - `LLAMA_EXTRA_ARGS` is parsed with shell-style quoting, so paths with spaces should be quoted.

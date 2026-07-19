@@ -98,6 +98,7 @@ Important behavior:
 - `LLAMA_MMPROJ` and `LLAMA_MMPROJ_RUNPOD_CACHE` are passed via `--mmproj` flag for multimodal projection files
 - `LLAMA_SPEC_DRAFT_MODEL` and `LLAMA_SPEC_DRAFT_MODEL_RUNPOD_CACHE` are passed via `--spec-draft-model` flag for speculative decoding draft models
 - `LLAMA_SPEC_TYPE` is passed verbatim via `--spec-type` flag; `LLAMA_SPEC_DRAFT_N_MAX` is passed via `--spec-draft-n-max` flag
+- `LLAMA_FLASH_ATTN` is passed via `--flash-attn` flag (boolean: `on`/`off`); `LLAMA_BATCH_SIZE` is passed via `-b` flag; `LLAMA_UBATCH_SIZE` is passed via `-ub` flag
 - `LLAMA_EXTRA_ARGS` supports shell-style quoting
 - If `LLAMA_HOST` uses a wildcard bind such as `0.0.0.0`, the proxy connects through `127.0.0.1` unless `LLAMA_CONNECT_HOST` is set
 
