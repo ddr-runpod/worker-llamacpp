@@ -23,6 +23,20 @@ uv sync
 LLAMA_HF_MODEL=unsloth/gemma-4-26B-A4B-it-GGUF:UD-Q6_K_XL uv run python -u app.py
 ```
 
+### Speculative decoding (Gemma 4 MTP)
+
+```bash
+LLAMA_MODEL_RUNPOD_CACHE=philipsorst/gemma-4-26B-A4B-it-UD-Q6_K_XL/gemma-4-26B-A4B-it-UD-Q6_K_XL.gguf \
+LLAMA_MMPROJ_RUNPOD_CACHE=philipsorst/gemma-4-26B-A4B-it-UD-Q6_K_XL/mmproj-BF16.gguf \
+LLAMA_SPEC_DRAFT_MODEL_RUNPOD_CACHE=philipsorst/gemma-4-26B-A4B-it-UD-Q6_K_XL/mtp-gemma-4-26B-A4B-it.gguf \
+LLAMA_SPEC_TYPE=draft-mtp \
+LLAMA_SPEC_DRAFT_N_MAX=2 \
+LLAMA_TEMPERATURE=1.0 \
+LLAMA_TOP_P=0.95 \
+LLAMA_TOP_K=64 \
+uv run python -u app.py
+```
+
 ## Run Tests
 
 ```bash
@@ -82,6 +96,8 @@ Important behavior:
 - `LLAMA_HF_MODEL` is passed via `-hf` flag for HuggingFace auto-download
 - `LLAMA_MODEL` and `LLAMA_MODEL_RUNPOD_CACHE` are passed via `--model` flag for local GGUF file paths
 - `LLAMA_MMPROJ` and `LLAMA_MMPROJ_RUNPOD_CACHE` are passed via `--mmproj` flag for multimodal projection files
+- `LLAMA_SPEC_DRAFT_MODEL` and `LLAMA_SPEC_DRAFT_MODEL_RUNPOD_CACHE` are passed via `--spec-draft-model` flag for speculative decoding draft models
+- `LLAMA_SPEC_TYPE` is passed verbatim via `--spec-type` flag; `LLAMA_SPEC_DRAFT_N_MAX` is passed via `--spec-draft-n-max` flag
 - `LLAMA_EXTRA_ARGS` supports shell-style quoting
 - If `LLAMA_HOST` uses a wildcard bind such as `0.0.0.0`, the proxy connects through `127.0.0.1` unless `LLAMA_CONNECT_HOST` is set
 

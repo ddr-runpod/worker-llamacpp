@@ -126,6 +126,10 @@ class LlamaConfig:
     hf_token: Optional[str] = None
     chat_template_kwargs: Optional[str] = None
     reasoning: Optional[str] = None
+    spec_draft_model: Optional[str] = None
+    spec_draft_model_runpod_cache: Optional[str] = None
+    spec_type: Optional[str] = None
+    spec_draft_n_max: Optional[int] = None
     extra_args: Optional[str] = None
 
     def __post_init__(self) -> None:
@@ -143,6 +147,10 @@ class LlamaConfig:
             raise ValueError(
                 "Only one of LLAMA_MMPROJ or LLAMA_MMPROJ_RUNPOD_CACHE may be set"
             )
+        if self.spec_draft_model and self.spec_draft_model_runpod_cache:
+            raise ValueError(
+                "Only one of LLAMA_SPEC_DRAFT_MODEL or LLAMA_SPEC_DRAFT_MODEL_RUNPOD_CACHE may be set"
+            )
 
     def resolve(self) -> None:
         if self.model_runpod_cache:
@@ -151,6 +159,11 @@ class LlamaConfig:
         if self.mmproj_runpod_cache:
             self.mmproj = resolve_runpod_cache_path(self.mmproj_runpod_cache)
             self.mmproj_runpod_cache = None
+        if self.spec_draft_model_runpod_cache:
+            self.spec_draft_model = resolve_runpod_cache_path(
+                self.spec_draft_model_runpod_cache
+            )
+            self.spec_draft_model_runpod_cache = None
 
     def to_args(self) -> list[str]:
         args = []
@@ -161,6 +174,8 @@ class LlamaConfig:
             ("--mmproj", self.mmproj),
             ("--chat-template-kwargs", self.chat_template_kwargs),
             ("--reasoning", self.reasoning),
+            ("--spec-draft-model", self.spec_draft_model),
+            ("--spec-type", self.spec_type),
         ]
         for flag, val in str_opts:
             if val is not None:
@@ -173,6 +188,7 @@ class LlamaConfig:
             ("--port", self.port),
             ("-np", self.n_parallel),
             ("--top-k", self.top_k),
+            ("--spec-draft-n-max", self.spec_draft_n_max),
         ]
         for flag, val in int_opts:
             if val is not None:
@@ -201,6 +217,11 @@ class LlamaConfig:
             _dump_volume_tree()
             raise FileNotFoundError(
                 f"LLAMA_MMPROJ file not found: {self.mmproj}"
+            )
+        if self.spec_draft_model and not os.path.isfile(self.spec_draft_model):
+            _dump_volume_tree()
+            raise FileNotFoundError(
+                f"LLAMA_SPEC_DRAFT_MODEL file not found: {self.spec_draft_model}"
             )
 
     def get_env(self) -> dict:
@@ -231,6 +252,12 @@ class LlamaConfig:
             hf_token=_optional_str("HF_TOKEN"),
             chat_template_kwargs=_optional_str("LLAMA_CHAT_TEMPLATE_KWARGS"),
             reasoning=_optional_on_off("LLAMA_REASONING"),
+            spec_draft_model=_optional_str("LLAMA_SPEC_DRAFT_MODEL"),
+            spec_draft_model_runpod_cache=_optional_str(
+                "LLAMA_SPEC_DRAFT_MODEL_RUNPOD_CACHE"
+            ),
+            spec_type=_optional_str("LLAMA_SPEC_TYPE"),
+            spec_draft_n_max=_optional_int("LLAMA_SPEC_DRAFT_N_MAX"),
             extra_args=_optional_str("LLAMA_EXTRA_ARGS"),
         )
 

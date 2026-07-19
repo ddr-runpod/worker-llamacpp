@@ -59,6 +59,8 @@ Important runtime behavior:
 - `LLAMA_MODEL` is required and validated at startup.
 - Use `LLAMA_HF_MODEL` for HuggingFace auto-download via `-hf` flag, `LLAMA_MODEL` for a local file via `--model` flag, or `LLAMA_MODEL_RUNPOD_CACHE` for auto-resolved RunPod cache paths.
 - `LLAMA_MODEL_RUNPOD_CACHE` and `LLAMA_MMPROJ_RUNPOD_CACHE` auto-resolve to the correct snapshot directory by reading the model's `refs/main` hash.
+- `LLAMA_SPEC_DRAFT_MODEL` and `LLAMA_SPEC_DRAFT_MODEL_RUNPOD_CACHE` map to `--spec-draft-model` for speculative decoding.
+- `LLAMA_SPEC_TYPE` is passed verbatim via `--spec-type`; `LLAMA_SPEC_DRAFT_N_MAX` maps to `--spec-draft-n-max`.
 - `LLAMA_EXTRA_ARGS` is parsed with shell-style quoting, so values containing spaces should be quoted.
 - If `LLAMA_HOST` is `0.0.0.0` or `::`, the proxy defaults `LLAMA_CONNECT_HOST` to `127.0.0.1` unless explicitly overridden.
 
@@ -106,6 +108,14 @@ uv sync --all-extras
 
 # Run locally with HuggingFace model
 LLAMA_HF_MODEL=unsloth/gemma-4-26B-A4B-it-GGUF:UD-Q6_K_XL uv run python -u app.py
+
+# Run locally with speculative decoding (Gemma 4 MTP)
+LLAMA_MODEL_RUNPOD_CACHE=philipsorst/gemma-4-26B-A4B-it-UD-Q6_K_XL/gemma-4-26B-A4B-it-UD-Q6_K_XL.gguf \
+LLAMA_MMPROJ_RUNPOD_CACHE=philipsorst/gemma-4-26B-A4B-it-UD-Q6_K_XL/mmproj-BF16.gguf \
+LLAMA_SPEC_DRAFT_MODEL_RUNPOD_CACHE=philipsorst/gemma-4-26B-A4B-it-UD-Q6_K_XL/mtp-gemma-4-26B-A4B-it.gguf \
+LLAMA_SPEC_TYPE=draft-mtp \
+LLAMA_SPEC_DRAFT_N_MAX=2 \
+uv run python -u app.py
 
 # Run tests
 uv run pytest tests/

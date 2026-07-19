@@ -43,6 +43,10 @@ class TestLlamaConfig:
         assert config.hf_token is None
         assert config.chat_template_kwargs is None
         assert config.reasoning is None
+        assert config.spec_draft_model is None
+        assert config.spec_draft_model_runpod_cache is None
+        assert config.spec_type is None
+        assert config.spec_draft_n_max is None
 
     def test_from_env_with_no_extra_env_vars(self, monkeypatch):
         monkeypatch.setenv("LLAMA_HF_MODEL", "unsloth/gemma-4-26B-A4B-it-GGUF:UD-Q6_K_XL")
@@ -69,6 +73,10 @@ class TestLlamaConfig:
         assert config.hf_token is None
         assert config.chat_template_kwargs is None
         assert config.reasoning is None
+        assert config.spec_draft_model is None
+        assert config.spec_draft_model_runpod_cache is None
+        assert config.spec_type is None
+        assert config.spec_draft_n_max is None
 
     def test_from_env_with_custom_values(self, monkeypatch):
         monkeypatch.setenv("LLAMA_HF_MODEL", "unsloth/gemma-4-26B-A4B-it-GGUF")
@@ -105,6 +113,10 @@ class TestLlamaConfig:
         assert config.hf_token == "hf_token123"
         assert config.chat_template_kwargs == '{"enable_thinking":true}'
         assert config.reasoning == "on"
+        assert config.spec_draft_model is None
+        assert config.spec_draft_model_runpod_cache is None
+        assert config.spec_type is None
+        assert config.spec_draft_n_max is None
 
     def test_reasoning_parses_variations(self, monkeypatch):
         monkeypatch.setenv("LLAMA_HF_MODEL", "test")
@@ -381,6 +393,125 @@ class TestLlamaConfig:
 
         assert "--model" in args and str(model_file) in args
         assert "-hf" not in args
+
+    def test_from_env_with_spec_draft_model(self, monkeypatch):
+        monkeypatch.setenv("LLAMA_HF_MODEL", "test")
+        monkeypatch.setenv("LLAMA_SPEC_DRAFT_MODEL", "/models/draft.gguf")
+
+        config = LlamaConfig.from_env()
+
+        assert config.spec_draft_model == "/models/draft.gguf"
+        assert config.spec_draft_model_runpod_cache is None
+
+    def test_from_env_with_spec_draft_model_runpod_cache(self, monkeypatch):
+        monkeypatch.setenv("LLAMA_HF_MODEL", "test")
+        monkeypatch.setenv(
+            "LLAMA_SPEC_DRAFT_MODEL_RUNPOD_CACHE",
+            "org/test/mtp-draft.gguf",
+        )
+
+        config = LlamaConfig.from_env()
+
+        assert config.spec_draft_model is None
+        assert config.spec_draft_model_runpod_cache == "org/test/mtp-draft.gguf"
+
+    def test_from_env_with_spec_draft_n_max(self, monkeypatch):
+        monkeypatch.setenv("LLAMA_HF_MODEL", "test")
+        monkeypatch.setenv("LLAMA_SPEC_DRAFT_N_MAX", "2")
+
+        config = LlamaConfig.from_env()
+
+        assert config.spec_draft_n_max == 2
+
+    def test_from_env_rejects_both_spec_draft_options(self, monkeypatch):
+        monkeypatch.setenv("LLAMA_HF_MODEL", "test")
+        monkeypatch.setenv("LLAMA_SPEC_DRAFT_MODEL", "/models/draft.gguf")
+        monkeypatch.setenv(
+            "LLAMA_SPEC_DRAFT_MODEL_RUNPOD_CACHE", "org/test/mtp-draft.gguf"
+        )
+
+        with pytest.raises(
+            ValueError,
+            match="Only one of LLAMA_SPEC_DRAFT_MODEL or LLAMA_SPEC_DRAFT_MODEL_RUNPOD_CACHE",
+        ):
+            LlamaConfig.from_env()
+
+    def test_constructor_rejects_both_spec_draft_options(self):
+        with pytest.raises(
+            ValueError,
+            match="Only one of LLAMA_SPEC_DRAFT_MODEL or LLAMA_SPEC_DRAFT_MODEL_RUNPOD_CACHE",
+        ):
+            LlamaConfig(
+                hf_model="test",
+                spec_draft_model="/models/draft.gguf",
+                spec_draft_model_runpod_cache="org/test/mtp-draft.gguf",
+            )
+
+    def test_spec_type_passed_through(self, monkeypatch):
+        monkeypatch.setenv("LLAMA_HF_MODEL", "test")
+        monkeypatch.setenv("LLAMA_SPEC_TYPE", "draft-mtp")
+
+        config = LlamaConfig.from_env()
+
+        assert config.spec_type == "draft-mtp"
+
+    def test_spec_type_accepts_comma_separated(self, monkeypatch):
+        monkeypatch.setenv("LLAMA_HF_MODEL", "test")
+        monkeypatch.setenv("LLAMA_SPEC_TYPE", "draft-simple,ngram-simple")
+
+        config = LlamaConfig.from_env()
+
+        assert config.spec_type == "draft-simple,ngram-simple"
+
+    def test_to_args_emits_spec_draft_model_and_spec_type(self):
+        config = LlamaConfig(
+            hf_model="test",
+            spec_draft_model="/models/draft.gguf",
+            spec_type="draft-mtp",
+        )
+
+        args = config.to_args()
+
+        assert "--spec-draft-model" in args and "/models/draft.gguf" in args
+        assert "--spec-type" in args and "draft-mtp" in args
+
+    def test_to_args_emits_spec_draft_n_max(self):
+        config = LlamaConfig(hf_model="test", spec_draft_n_max=4)
+
+        args = config.to_args()
+
+        assert "--spec-draft-n-max" in args and "4" in args
+
+    def test_resolve_clears_spec_draft_model_runpod_cache(self, tmp_path, monkeypatch):
+        cache = self._make_cache(tmp_path, hash="mtp123", files=["mtp-draft.gguf"])
+        draft_file = cache / "snapshots" / "mtp123" / "mtp-draft.gguf"
+        monkeypatch.setattr("config.RUNPOD_CACHE_HUB", str(tmp_path))
+
+        config = LlamaConfig(
+            hf_model="test",
+            spec_draft_model_runpod_cache="org/test/mtp-draft.gguf",
+        )
+        config.resolve()
+
+        assert config.spec_draft_model == str(draft_file)
+        assert config.spec_draft_model_runpod_cache is None
+
+    def test_validate_files_raises_for_missing_spec_draft_model(self):
+        config = LlamaConfig(
+            hf_model="test",
+            spec_draft_model="/nonexistent/draft.gguf",
+        )
+
+        with pytest.raises(FileNotFoundError, match="LLAMA_SPEC_DRAFT_MODEL file not found"):
+            config.validate_files()
+
+    def test_validate_files_passes_for_existing_spec_draft_model(self, tmp_path):
+        model = tmp_path / "model.gguf"
+        model.write_bytes(b"dummy")
+        draft = tmp_path / "draft.gguf"
+        draft.write_bytes(b"dummy")
+        config = LlamaConfig(model=str(model), spec_draft_model=str(draft))
+        config.validate_files()
 
 
 class TestResolveRunpodCachePath:

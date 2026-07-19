@@ -53,6 +53,17 @@ Exactly one of `LLAMA_HF_MODEL`, `LLAMA_MODEL`, or `LLAMA_MODEL_RUNPOD_CACHE` mu
 | `LLAMA_MMPROJ` | Path to a multimodal projection (mmproj) GGUF file. Used for vision/language models. Passed via `--mmproj` flag. |
 | `LLAMA_MMPROJ_RUNPOD_CACHE` | RunPod cached mmproj path in `org/name/filename` format. Auto-resolves to the correct snapshot path. Passed via `--mmproj` flag. |
 
+## Speculative Decoding (Optional)
+
+| Variable | Description |
+|----------|-------------|
+| `LLAMA_SPEC_DRAFT_MODEL` | Local path to a draft GGUF model for speculative decoding. Passed via `--spec-draft-model` flag. |
+| `LLAMA_SPEC_DRAFT_MODEL_RUNPOD_CACHE` | RunPod cached draft model path in `org/name/filename` format. Auto-resolves to the correct snapshot path. Passed via `--spec-draft-model` flag. |
+| `LLAMA_SPEC_TYPE` | Comma-separated list of speculative decoding types (e.g., `draft-mtp`, `draft-eagle3`, `ngram-simple`). Passed verbatim via `--spec-type` flag. |
+| `LLAMA_SPEC_DRAFT_N_MAX` | Maximum number of tokens to draft for speculative decoding (default: 3). Passed via `--spec-draft-n-max` flag. |
+
+Exactly one of `LLAMA_SPEC_DRAFT_MODEL` or `LLAMA_SPEC_DRAFT_MODEL_RUNPOD_CACHE` may be set.
+
 ## Advanced
 
 | Variable | Description |
@@ -85,6 +96,8 @@ The worker outputs structured JSON logs to stderr, which RunPod captures automat
 - `LLAMA_HF_MODEL` is passed via `-hf` flag, enabling automatic HuggingFace model download and mmproj selection.
 - `LLAMA_MODEL` and `LLAMA_MODEL_RUNPOD_CACHE` are passed via `--model` flag for local GGUF file paths.
 - `LLAMA_MMPROJ` and `LLAMA_MMPROJ_RUNPOD_CACHE` are passed via `--mmproj` flag for multimodal projection files.
+- `LLAMA_SPEC_DRAFT_MODEL` and `LLAMA_SPEC_DRAFT_MODEL_RUNPOD_CACHE` are passed via `--spec-draft-model` flag for speculative decoding draft models.
+- `LLAMA_SPEC_TYPE` is passed verbatim via `--spec-type` flag. `LLAMA_SPEC_DRAFT_N_MAX` is passed via `--spec-draft-n-max` flag.
 - `HF_HOME` defaults to `/runpod-volume/huggingface-cache` when not set.
 - If `LLAMA_HOST` is `0.0.0.0` or `::`, the proxy automatically connects to `127.0.0.1` unless `LLAMA_CONNECT_HOST` is set.
 - `LLAMA_EXTRA_ARGS` is parsed with shell-style quoting, so paths with spaces should be quoted.
@@ -121,6 +134,15 @@ LLAMA_EXTRA_ARGS=--flash-attn on --rope-scaling yarn --embedding
 ### Using extra args with spaces
 ```
 LLAMA_EXTRA_ARGS=--log-file "/tmp/llama server.log"
+```
+
+### Speculative decoding (Gemma 4 MTP)
+```
+LLAMA_MODEL_RUNPOD_CACHE=philipsorst/gemma-4-26B-A4B-it-UD-Q6_K_XL/gemma-4-26B-A4B-it-UD-Q6_K_XL.gguf
+LLAMA_MMPROJ_RUNPOD_CACHE=philipsorst/gemma-4-26B-A4B-it-UD-Q6_K_XL/mmproj-BF16.gguf
+LLAMA_SPEC_DRAFT_MODEL_RUNPOD_CACHE=philipsorst/gemma-4-26B-A4B-it-UD-Q6_K_XL/mtp-gemma-4-26B-A4B-it.gguf
+LLAMA_SPEC_TYPE=draft-mtp
+LLAMA_SPEC_DRAFT_N_MAX=2
 ```
 
 ### Debugging model downloads
