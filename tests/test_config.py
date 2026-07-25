@@ -50,6 +50,7 @@ class TestLlamaConfig:
         assert config.spec_draft_model_runpod_cache is None
         assert config.spec_type is None
         assert config.spec_draft_n_max is None
+        assert config.alias is None
 
     def test_from_env_with_no_extra_env_vars(self, monkeypatch):
         monkeypatch.setenv("LLAMA_HF_MODEL", "unsloth/gemma-4-26B-A4B-it-GGUF:UD-Q6_K_XL")
@@ -83,6 +84,7 @@ class TestLlamaConfig:
         assert config.spec_draft_model_runpod_cache is None
         assert config.spec_type is None
         assert config.spec_draft_n_max is None
+        assert config.alias is None
 
     def test_from_env_with_custom_values(self, monkeypatch):
         monkeypatch.setenv("LLAMA_HF_MODEL", "unsloth/gemma-4-26B-A4B-it-GGUF")
@@ -126,6 +128,7 @@ class TestLlamaConfig:
         assert config.spec_draft_model_runpod_cache is None
         assert config.spec_type is None
         assert config.spec_draft_n_max is None
+        assert config.alias is None
 
     def test_reasoning_parses_variations(self, monkeypatch):
         monkeypatch.setenv("LLAMA_HF_MODEL", "test")
@@ -583,6 +586,22 @@ class TestLlamaConfig:
         assert "--flash-attn" not in args
         assert "-b" not in args
         assert "-ub" not in args
+        assert "--alias" not in args
+
+    def test_from_env_with_alias(self, monkeypatch):
+        monkeypatch.setenv("LLAMA_HF_MODEL", "test")
+        monkeypatch.setenv("LLAMA_ALIAS", "my-model,alt-name")
+
+        config = LlamaConfig.from_env()
+
+        assert config.alias == "my-model,alt-name"
+
+    def test_to_args_emits_alias(self):
+        config = LlamaConfig(hf_model="test", alias="my-model,alt-name")
+
+        args = config.to_args()
+
+        assert "--alias" in args and "my-model,alt-name" in args
 
 
 class TestResolveRunpodCachePath:

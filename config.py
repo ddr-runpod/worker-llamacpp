@@ -133,6 +133,7 @@ class LlamaConfig:
     spec_draft_model_runpod_cache: Optional[str] = None
     spec_type: Optional[str] = None
     spec_draft_n_max: Optional[int] = None
+    alias: Optional[str] = None
     extra_args: Optional[str] = None
 
     def __post_init__(self) -> None:
@@ -180,6 +181,7 @@ class LlamaConfig:
             ("--flash-attn", self.flash_attn),
             ("--spec-draft-model", self.spec_draft_model),
             ("--spec-type", self.spec_type),
+            ("--alias", self.alias),
         ]
         for flag, val in str_opts:
             if val is not None:
@@ -267,6 +269,7 @@ class LlamaConfig:
             ),
             spec_type=_optional_str("LLAMA_SPEC_TYPE"),
             spec_draft_n_max=_optional_int("LLAMA_SPEC_DRAFT_N_MAX"),
+            alias=_optional_str("LLAMA_ALIAS"),
             extra_args=_optional_str("LLAMA_EXTRA_ARGS"),
         )
 

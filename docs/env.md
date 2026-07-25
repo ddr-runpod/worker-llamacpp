@@ -72,6 +72,12 @@ Exactly one of `LLAMA_HF_MODEL`, `LLAMA_MODEL`, or `LLAMA_MODEL_RUNPOD_CACHE` mu
 
 Exactly one of `LLAMA_SPEC_DRAFT_MODEL` or `LLAMA_SPEC_DRAFT_MODEL_RUNPOD_CACHE` may be set.
 
+## Model Identity (Optional)
+
+| Variable | Description |
+|----------|-------------|
+| `LLAMA_ALIAS` | Comma-separated model name aliases returned by API endpoints (e.g., `gemma-4-26B,my-alias`). Passed verbatim via `--alias` flag. |
+
 ## Advanced
 
 | Variable | Description |
@@ -106,6 +112,7 @@ The worker outputs structured JSON logs to stderr, which RunPod captures automat
 - `LLAMA_MMPROJ` and `LLAMA_MMPROJ_RUNPOD_CACHE` are passed via `--mmproj` flag for multimodal projection files.
 - `LLAMA_SPEC_DRAFT_MODEL` and `LLAMA_SPEC_DRAFT_MODEL_RUNPOD_CACHE` are passed via `--spec-draft-model` flag for speculative decoding draft models.
 - `LLAMA_SPEC_TYPE` is passed verbatim via `--spec-type` flag. `LLAMA_SPEC_DRAFT_N_MAX` is passed via `--spec-draft-n-max` flag.
+- `LLAMA_ALIAS` is passed verbatim via `--alias` flag; multiple aliases can be set as a comma-separated list.
 - `LLAMA_FLASH_ATTN` is passed via `--flash-attn` flag (boolean). `LLAMA_BATCH_SIZE` is passed via `-b` flag; `LLAMA_UBATCH_SIZE` is passed via `-ub` flag.
 - Continuous batching (`--cont-batching`) is enabled by default upstream and intentionally not exposed as an env var.
 - `HF_HOME` defaults to `/runpod-volume/huggingface-cache` when not set.
