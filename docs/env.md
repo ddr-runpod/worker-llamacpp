@@ -24,6 +24,7 @@ Exactly one of `LLAMA_HF_MODEL`, `LLAMA_MODEL`, or `LLAMA_MODEL_RUNPOD_CACHE` mu
 | `LLAMA_TEMPERATURE` | Sampling temperature |
 | `LLAMA_TOP_P` | Top-p (nucleus) sampling |
 | `LLAMA_TOP_K` | Top-k sampling |
+| `LLAMA_MIN_P` | Minimum probability (min-p) sampling |
 
 ## Context & Performance (Optional)
 
@@ -141,6 +142,7 @@ LLAMA_MODEL=/models/test.gguf
 LLAMA_TEMPERATURE=1.0
 LLAMA_TOP_P=0.95
 LLAMA_TOP_K=64
+LLAMA_MIN_P=0.05
 ```
 
 ### Using extra args

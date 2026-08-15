@@ -117,6 +117,7 @@ class LlamaConfig:
     temperature: Optional[float] = None
     top_p: Optional[float] = None
     top_k: Optional[int] = None
+    min_p: Optional[float] = None
     ctx_size: Optional[int] = None
     n_gpu_layers: Optional[int] = None
     threads: Optional[int] = None
@@ -205,6 +206,7 @@ class LlamaConfig:
         float_opts = [
             ("--temp", self.temperature),
             ("--top-p", self.top_p),
+            ("--min-p", self.min_p),
         ]
         for flag, val in float_opts:
             if val is not None:
@@ -251,6 +253,7 @@ class LlamaConfig:
             temperature=_optional_float("LLAMA_TEMPERATURE"),
             top_p=_optional_float("LLAMA_TOP_P"),
             top_k=_optional_int("LLAMA_TOP_K"),
+            min_p=_optional_float("LLAMA_MIN_P"),
             ctx_size=_optional_int("LLAMA_CONTEXT_SIZE"),
             n_gpu_layers=_optional_int("LLAMA_N_GPU_LAYERS"),
             threads=_optional_int("LLAMA_THREADS"),

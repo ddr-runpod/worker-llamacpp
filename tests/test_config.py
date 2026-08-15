@@ -95,6 +95,7 @@ class TestLlamaConfig:
         monkeypatch.setenv("LLAMA_TEMPERATURE", "0.5")
         monkeypatch.setenv("LLAMA_TOP_P", "0.9")
         monkeypatch.setenv("LLAMA_TOP_K", "100")
+        monkeypatch.setenv("LLAMA_MIN_P", "0.05")
         monkeypatch.setenv("LLAMA_PORT", "9090")
         monkeypatch.setenv("LLAMA_N_PARALLEL", "4")
         monkeypatch.setenv("LLAMA_EXTRA_ARGS", "--flash-attn on --embedding")
@@ -114,6 +115,7 @@ class TestLlamaConfig:
         assert config.temperature == 0.5
         assert config.top_p == 0.9
         assert config.top_k == 100
+        assert config.min_p == 0.05
         assert config.port == 9090
         assert config.n_parallel == 4
         assert config.extra_args == "--flash-attn on --embedding"
@@ -156,6 +158,7 @@ class TestLlamaConfig:
             temperature=0.7,
             top_p=0.9,
             top_k=50,
+            min_p=0.05,
             port=8080,
             n_parallel=2,
         )
@@ -169,6 +172,7 @@ class TestLlamaConfig:
         assert "--temp" in args and "0.7" in args
         assert "--top-p" in args and "0.9" in args
         assert "--top-k" in args and "50" in args
+        assert "--min-p" in args and "0.05" in args
         assert "--port" in args and "8080" in args
         assert "-np" in args and "2" in args
 
@@ -180,6 +184,7 @@ class TestLlamaConfig:
             temperature=0.7,
             top_p=0.9,
             top_k=50,
+            min_p=0.05,
             port=8080,
             n_parallel=2,
         )
@@ -193,6 +198,7 @@ class TestLlamaConfig:
         assert "--temp" in args and "0.7" in args
         assert "--top-p" in args and "0.9" in args
         assert "--top-k" in args and "50" in args
+        assert "--min-p" in args and "0.05" in args
         assert "--port" in args and "8080" in args
         assert "-np" in args and "2" in args
 
@@ -266,6 +272,13 @@ class TestLlamaConfig:
         monkeypatch.setenv("LLAMA_PORT", "nope")
 
         with pytest.raises(ValueError, match="LLAMA_PORT must be an integer"):
+            LlamaConfig.from_env()
+
+    def test_from_env_rejects_invalid_float(self, monkeypatch):
+        monkeypatch.setenv("LLAMA_HF_MODEL", "test")
+        monkeypatch.setenv("LLAMA_MIN_P", "nope")
+
+        with pytest.raises(ValueError, match="LLAMA_MIN_P must be a number"):
             LlamaConfig.from_env()
 
     def test_get_env_returns_hf_vars(self):
