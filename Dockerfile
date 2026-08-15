@@ -1,5 +1,5 @@
 # Use the official llama.cpp CUDA server image as the base
-FROM ghcr.io/ggml-org/llama.cpp:server-cuda-b10121
+FROM ghcr.io/ggml-org/llama.cpp:server-cuda-b10442
 
 # Install Python 3, uv, and openssh-server
 RUN apt-get update && apt-get install -y --no-install-recommends \
